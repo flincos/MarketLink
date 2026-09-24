@@ -6,6 +6,7 @@ namespace App\Models;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -33,5 +34,19 @@ class User extends Authenticatable
     public function farmerProfile(): HasOne
 {
     return $this->hasOne(FarmerProfile::class);
+}
+public function orders(): HasMany
+{
+    return $this->hasMany(Order::class, 'customer_id');
+}
+
+public function favorites(): HasMany
+{
+    return $this->hasMany(Favorite::class);
+}
+
+public function reviews(): HasMany
+{
+    return $this->hasMany(Review::class);
 }
 }
