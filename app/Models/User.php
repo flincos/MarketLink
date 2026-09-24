@@ -30,4 +30,8 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+    public function farmerProfile(): HasOne
+{
+    return $this->hasOne(FarmerProfile::class);
+}
 }
