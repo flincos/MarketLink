@@ -8,12 +8,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Review extends Model
 {
     protected $fillable = [
-        'user_id',
-        'product_id',
-        'rating',
-        'comment',
-    ];
-
+    'customer_id',
+    'product_id',
+    'rating',
+    'comment',
+    'farmer_response',
+];
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -23,4 +23,8 @@ class Review extends Model
     {
         return $this->belongsTo(Product::class);
     }
+    public function customer()
+{
+    return $this->belongsTo(User::class, 'customer_id');
+}
 }

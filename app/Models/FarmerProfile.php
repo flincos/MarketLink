@@ -18,6 +18,8 @@ class FarmerProfile extends Model
         'latitude',
         'longitude',
         'description',
+        'operating_days',
+        'order_cutoff_time',
         'status',
     ];
 
@@ -37,5 +39,11 @@ class FarmerProfile extends Model
 public function pickupSlots(): HasMany
 {
     return $this->hasMany(PickupSlot::class, 'farmer_profile_id');
+    
 }
+
+    protected $casts = [
+    'operating_days' => 'array',
+];
+
 }
