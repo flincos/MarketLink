@@ -11,6 +11,13 @@ use App\Http\Controllers\Farmer\OrderController;
 use App\Http\Controllers\Farmer\ReviewController;
 use App\Http\Controllers\Farmer\ProductController;
 use App\Http\Controllers\FarmerProfileController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\FarmerController;
+use App\Http\Controllers\Admin\CustomerController;
+use App\Http\Controllers\Admin\ProductModerationController;
+use App\Http\Controllers\Admin\ReviewModerationController;
+use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\MarketController as AdminMarketController;
 
 // Home
 Route::get('/', function () {
@@ -49,9 +56,34 @@ Route::middleware(['auth', 'role:farmer'])->group(function () {
 });
 
 // Admin dashboard
-Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
-    Route::get('/dashboard', fn () => view('admin.dashboard'))
-        ->name('admin.dashboard');
+Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+
+    // Farmers
+    Route::get('/farmers', [FarmerController::class, 'index'])->name('farmers.index');
+    Route::patch('/farmers/{farmerProfile}/approve', [FarmerController::class, 'approve'])->name('farmers.approve');
+    Route::patch('/farmers/{farmerProfile}/suspend', [FarmerController::class, 'suspend'])->name('farmers.suspend');
+    
+    // Customers
+    Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
+    Route::patch('/customers/{user}/activate', [CustomerController::class, 'activate'])->name('customers.activate');
+    Route::patch('/customers/{user}/deactivate', [CustomerController::class, 'deactivate'])->name('customers.deactivate');
+
+    // Product moderation
+    Route::get('/products', [ProductModerationController::class, 'index'])->name('products.index');
+    Route::patch('/products/{product}/hide', [ProductModerationController::class, 'hide'])->name('products.hide');
+    Route::patch('/products/{product}/unhide', [ProductModerationController::class, 'unhide'])->name('products.unhide');
+
+    // Review moderation
+    Route::get('/reviews', [ReviewModerationController::class, 'index'])->name('reviews.index');
+    Route::patch('/reviews/{review}/hide', [ReviewModerationController::class, 'hide'])->name('reviews.hide');
+    Route::patch('/reviews/{review}/unhide', [ReviewModerationController::class, 'unhide'])->name('reviews.unhide');
+    
+    //category
+    Route::resource('categories', CategoryController::class)->except(['show']);
+
+    //Market
+    Route::resource('markets', AdminMarketController::class)->except(['show']);
 });
 
 // Farmer routes
