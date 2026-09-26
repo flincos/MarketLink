@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'password', 'role'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -32,21 +32,42 @@ class User extends Authenticatable
         ];
     }
     public function farmerProfile(): HasOne
-{
-    return $this->hasOne(FarmerProfile::class);
-}
-public function orders(): HasMany
-{
-    return $this->hasMany(Order::class, 'customer_id');
-}
+    {
+        return $this->hasOne(FarmerProfile::class);
+    }
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class, 'customer_id');
+    }
 
-public function favorites(): HasMany
-{
-    return $this->hasMany(Favorite::class);
-}
+    public function favorites(): HasMany
+    {
+        return $this->hasMany(Favorite::class);
+    }
 
-public function reviews(): HasMany
-{
-    return $this->hasMany(Review::class);
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class);
 }
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    public function isFarmer(): bool
+    {
+        return $this->role === 'farmer';
+    }
+
+    public function isCustomer(): bool
+    {
+        return $this->role === 'customer';
+    }
+
+    public function isApprovedFarmer(): bool
+    {
+        return $this->isFarmer()
+            && $this->farmerProfile
+            && $this->farmerProfile->status === 'approved';
+    }
 }
