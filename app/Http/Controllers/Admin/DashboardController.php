@@ -18,7 +18,23 @@ class DashboardController extends Controller
         $totalMarkets = Market::count();
         $totalOrders = Order::count();
 
-        $revenueTotal = Order::where('status', 'completed')->sum('total_amount');
+        $revenueTotal = Order::where('status', 'completed')
+            ->sum('total_amount');
+
+        $marketRevenue = Order::query()
+            ->where('status', 'completed')
+            ->selectRaw('market_id, SUM(total_amount) as revenue')
+            ->with('market')
+            ->groupBy('market_id')
+            ->orderByDesc('revenue')
+            ->get();
+
+        $activeFarmers = FarmerProfile::query()
+            ->with('user')
+            ->withCount('orders')
+            ->orderByDesc('orders_count')
+            ->take(5)
+            ->get();
 
         $recentOrders = Order::with(['customer', 'farmer'])
             ->latest()
@@ -37,6 +53,8 @@ class DashboardController extends Controller
             'totalMarkets',
             'totalOrders',
             'revenueTotal',
+            'marketRevenue',
+            'activeFarmers',
             'recentOrders',
             'recentFarmers',
         ));
