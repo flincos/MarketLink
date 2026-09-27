@@ -4,6 +4,12 @@ namespace App\Http\Controllers\Farmer;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\Product;
+use App\Notifications\OrderConfirmed;
+use App\Notifications\OrderReadyForPickup;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class OrderController extends Controller
 {
@@ -83,7 +89,7 @@ class OrderController extends Controller
         ));
     }
 
-    public function updateStatus(\Illuminate\Http\Request $request, Order $order)
+    public function updateStatus(Request $request, Order $order)
     {
         $farmer = auth()->user()->farmerProfile;
 
@@ -96,9 +102,88 @@ class OrderController extends Controller
             'status' => 'required|in:accepted,declined,ready,completed',
         ]);
 
-        $order->update([
-            'status' => $validated['status'],
-        ]);
+        $currentStatus = $order->status;
+        $newStatus = $validated['status'];
+
+        $allowedTransitions = [
+            'placed' => ['accepted', 'declined'],
+            'accepted' => ['ready'],
+            'ready' => ['completed'],
+        ];
+
+        if (
+            ! isset($allowedTransitions[$currentStatus]) ||
+            ! in_array($newStatus, $allowedTransitions[$currentStatus], true)
+        ) {
+            return redirect()
+                ->route('farmer.orders.show', $order)
+                ->with('error', 'This order cannot be moved to that status.');
+        }
+
+        DB::transaction(function () use ($order, $newStatus) {
+            $lockedOrder = Order::query()
+                ->lockForUpdate()
+                ->findOrFail($order->id);
+
+            abort_unless(
+                $lockedOrder->farmer_profile_id === auth()->user()->farmerProfile->id,
+                403
+            );
+
+            $currentStatus = $lockedOrder->status;
+
+            $allowedTransitions = [
+                'placed' => ['accepted', 'declined'],
+                'accepted' => ['ready'],
+                'ready' => ['completed'],
+            ];
+
+            if (
+                ! isset($allowedTransitions[$currentStatus]) ||
+                ! in_array($newStatus, $allowedTransitions[$currentStatus], true)
+            ) {
+                throw ValidationException::withMessages([
+                    'status' => 'This order status transition is no longer valid.',
+                ]);
+            }
+
+            if ($newStatus === 'declined') {
+                $lockedOrder->load('items');
+
+                foreach ($lockedOrder->items as $item) {
+                    if ($item->product_id) {
+                        Product::query()
+                            ->whereKey($item->product_id)
+                            ->lockForUpdate()
+                            ->first()?->increment(
+                                'stock_quantity',
+                                $item->quantity
+                            );
+                    }
+                }
+            }
+
+            $lockedOrder->update([
+                'status' => $newStatus,
+            ]);
+        });
+
+        $order->refresh();
+        $order->load('customer');
+
+        if ($order->customer) {
+            if ($newStatus === 'accepted') {
+                $order->customer->notify(
+                    new OrderConfirmed($order)
+                );
+            }
+
+            if ($newStatus === 'ready') {
+                $order->customer->notify(
+                    new OrderReadyForPickup($order)
+                );
+            }
+        }
 
         return redirect()
             ->route('farmer.orders.show', $order)
