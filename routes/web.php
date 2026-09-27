@@ -144,76 +144,80 @@ Route::middleware(['auth', 'role:farmer'])
         Route::put('/profile', [FarmerProfileController::class, 'update'])
             ->name('farmer.profile.update');
 
-        // Markets
-        Route::get('/markets', [MarketController::class, 'index'])
-            ->name('farmer.markets.index');
+        // Approved farmer operations
+        Route::middleware('approved.farmer')->group(function () {
 
-        Route::get('/markets/create', [MarketController::class, 'create'])
-            ->name('farmer.markets.create');
+            // Markets
+            Route::get('/markets', [MarketController::class, 'index'])
+                ->name('farmer.markets.index');
 
-        Route::post('/markets', [MarketController::class, 'store'])
-            ->name('farmer.markets.store');
+            Route::get('/markets/create', [MarketController::class, 'create'])
+                ->name('farmer.markets.create');
 
-        Route::delete('/markets/{market}', [MarketController::class, 'destroy'])
-            ->name('farmer.markets.destroy');
+            Route::post('/markets', [MarketController::class, 'store'])
+                ->name('farmer.markets.store');
 
-        // Pickup slots
-        Route::get('/pickup-slots', [PickupSlotController::class, 'index'])
-            ->name('farmer.pickup-slots.index');
+            Route::delete('/markets/{market}', [MarketController::class, 'destroy'])
+                ->name('farmer.markets.destroy');
 
-        Route::get('/pickup-slots/create', [PickupSlotController::class, 'create'])
-            ->name('farmer.pickup-slots.create');
+            // Pickup slots
+            Route::get('/pickup-slots', [PickupSlotController::class, 'index'])
+                ->name('farmer.pickup-slots.index');
 
-        Route::post('/pickup-slots', [PickupSlotController::class, 'store'])
-            ->name('farmer.pickup-slots.store');
+            Route::get('/pickup-slots/create', [PickupSlotController::class, 'create'])
+                ->name('farmer.pickup-slots.create');
 
-        Route::get('/pickup-slots/{pickupSlot}/edit', [PickupSlotController::class, 'edit'])
-            ->name('farmer.pickup-slots.edit');
+            Route::post('/pickup-slots', [PickupSlotController::class, 'store'])
+                ->name('farmer.pickup-slots.store');
 
-        Route::put('/pickup-slots/{pickupSlot}', [PickupSlotController::class, 'update'])
-            ->name('farmer.pickup-slots.update');
+            Route::get('/pickup-slots/{pickupSlot}/edit', [PickupSlotController::class, 'edit'])
+                ->name('farmer.pickup-slots.edit');
 
-        Route::delete('/pickup-slots/{pickupSlot}', [PickupSlotController::class, 'destroy'])
-            ->name('farmer.pickup-slots.destroy');
+            Route::put('/pickup-slots/{pickupSlot}', [PickupSlotController::class, 'update'])
+                ->name('farmer.pickup-slots.update');
 
-        // Orders
-        Route::get('/orders', [OrderController::class, 'index'])
-            ->name('farmer.orders.index');
+            Route::delete('/pickup-slots/{pickupSlot}', [PickupSlotController::class, 'destroy'])
+                ->name('farmer.pickup-slots.destroy');
 
-        Route::get('/orders/{order}', [OrderController::class, 'show'])
-            ->name('farmer.orders.show');
+            // Orders
+            Route::get('/orders', [OrderController::class, 'index'])
+                ->name('farmer.orders.index');
 
-        Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus'])
-            ->name('farmer.orders.update-status');
+            Route::get('/orders/{order}', [OrderController::class, 'show'])
+                ->name('farmer.orders.show');
 
-        Route::get('/orders/history', [OrderController::class, 'history'])
-            ->name('farmer.orders.history');
+            Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus'])
+                ->name('farmer.orders.update-status');
 
-        // Reviews
-        Route::get('/reviews', [ReviewController::class, 'index'])
-            ->name('farmer.reviews.index');
+            Route::get('/orders/history', [OrderController::class, 'history'])
+                ->name('farmer.orders.history');
 
-        Route::patch('/reviews/{review}/respond', [ReviewController::class, 'respond'])
-            ->name('farmer.reviews.respond');
+            // Reviews
+            Route::get('/reviews', [ReviewController::class, 'index'])
+                ->name('farmer.reviews.index');
 
-        // Products
-        Route::get('/products', [ProductController::class, 'index'])
-            ->name('farmer.products.index');
+            Route::patch('/reviews/{review}/respond', [ReviewController::class, 'respond'])
+                ->name('farmer.reviews.respond');
 
-        Route::get('/products/create', [ProductController::class, 'create'])
-            ->name('farmer.products.create');
+            // Products
+            Route::get('/products', [ProductController::class, 'index'])
+                ->name('farmer.products.index');
 
-        Route::post('/products', [ProductController::class, 'store'])
-            ->name('farmer.products.store');
+            Route::get('/products/create', [ProductController::class, 'create'])
+                ->name('farmer.products.create');
 
-        Route::get('/products/{product}/edit', [ProductController::class, 'edit'])
-            ->name('farmer.products.edit');
+            Route::post('/products', [ProductController::class, 'store'])
+                ->name('farmer.products.store');
 
-        Route::put('/products/{product}', [ProductController::class, 'update'])
-            ->name('farmer.products.update');
+            Route::get('/products/{product}/edit', [ProductController::class, 'edit'])
+                ->name('farmer.products.edit');
 
-        Route::delete('/products/{product}', [ProductController::class, 'destroy'])
-            ->name('farmer.products.destroy');
+            Route::put('/products/{product}', [ProductController::class, 'update'])
+                ->name('farmer.products.update');
+
+            Route::delete('/products/{product}', [ProductController::class, 'destroy'])
+                ->name('farmer.products.destroy');
+        });
     });
 
 // Customer routes
@@ -302,6 +306,7 @@ Route::middleware(['auth', 'role:customer'])
 
 // Static pages
 Route::view('/about', 'pages.about')->name('About');
+
 Route::view('/contact', 'pages.contact')->name('Contact Us');
 
 require __DIR__.'/auth.php';
