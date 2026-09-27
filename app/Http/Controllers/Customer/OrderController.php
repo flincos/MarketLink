@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\Review;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class OrderController extends Controller
 {
@@ -39,7 +40,7 @@ class OrderController extends Controller
         $product = Product::with(['farmer.pickupSlots.market'])
             ->findOrFail($request->product_id);
 
-        // Only show available pickup slots belonging to this farmer
+        // Only show available pickup slots belonging to this farmer.
         $pickupSlots = PickupSlot::with('market')
             ->where('farmer_profile_id', $product->farmer_profile_id)
             ->where('is_available', true)
@@ -63,23 +64,99 @@ class OrderController extends Controller
             'notes' => 'nullable|string|max:500',
         ]);
 
-        $product = Product::findOrFail($validated['product_id']);
+        DB::transaction(function () use ($validated) {
+            // Lock the product so concurrent checkouts cannot consume
+            // the same stock simultaneously.
+            $product = Product::with('farmer')
+                ->lockForUpdate()
+                ->findOrFail($validated['product_id']);
 
-        if ($product->stock_quantity < $validated['quantity']) {
-            return back()
-                ->withInput()
-                ->withErrors(['quantity' => 'Not enough stock. Only '.$product->stock_quantity.' available.']);
-        }
+            if (! $product->is_available || $product->is_hidden) {
+                throw ValidationException::withMessages([
+                    'product_id' => 'This product is not currently available.',
+                ]);
+            }
 
-        $pickupSlot = PickupSlot::findOrFail($validated['pickup_slot_id']);
+            $farmer = $product->farmer;
 
-        $subtotal = $product->price * $validated['quantity'];
+            if (! $farmer || $farmer->status !== 'approved') {
+                throw ValidationException::withMessages([
+                    'product_id' => 'This farmer is not currently approved.',
+                ]);
+            }
 
-        DB::transaction(function () use ($product, $pickupSlot, $validated, $subtotal) {
+            if ($product->stock_quantity < $validated['quantity']) {
+                throw ValidationException::withMessages([
+                    'quantity' => 'Not enough stock. Only ' . $product->stock_quantity . ' available.',
+                ]);
+            }
+
+            // Lock the pickup slot so concurrent checkouts cannot
+            // exceed its capacity.
+            $pickupSlot = PickupSlot::query()
+                ->lockForUpdate()
+                ->findOrFail($validated['pickup_slot_id']);
+
+            if (! $pickupSlot->is_available) {
+                throw ValidationException::withMessages([
+                    'pickup_slot_id' => 'This pickup slot is not available.',
+                ]);
+            }
+
+            if ($pickupSlot->date->isBefore(today())) {
+                throw ValidationException::withMessages([
+                    'pickup_slot_id' => 'This pickup slot is no longer available.',
+                ]);
+            }
+
+            // The selected slot must belong to the same farmer as the product.
+            if ($pickupSlot->farmer_profile_id !== $product->farmer_profile_id) {
+                throw ValidationException::withMessages([
+                    'pickup_slot_id' => 'The selected pickup slot does not belong to this farmer.',
+                ]);
+            }
+
+            // The slot's market must still belong to the farmer.
+            $marketBelongsToFarmer = $farmer->markets()
+                ->whereKey($pickupSlot->market_id)
+                ->exists();
+
+            if (! $marketBelongsToFarmer) {
+                throw ValidationException::withMessages([
+                    'pickup_slot_id' => 'The selected pickup market is not associated with this farmer.',
+                ]);
+            }
+
+            // Enforce the farmer's cutoff time for same-day pickup orders.
+            if (
+                $pickupSlot->date->isToday()
+                && $farmer->order_cutoff_time
+                && now()->format('H:i:s') >= $farmer->order_cutoff_time
+            ) {
+                throw ValidationException::withMessages([
+                    'pickup_slot_id' => 'The farmer\'s order cutoff time has passed.',
+                ]);
+            }
+
+            // Only active orders consume pickup-slot capacity.
+            $activeOrders = Order::query()
+                ->where('pickup_slot_id', $pickupSlot->id)
+                ->whereIn('status', ['placed', 'accepted', 'ready'])
+                ->count();
+
+            if ($activeOrders >= $pickupSlot->capacity) {
+                throw ValidationException::withMessages([
+                    'pickup_slot_id' => 'This pickup slot is full.',
+                ]);
+            }
+
+            $subtotal = $product->price * $validated['quantity'];
+
             $order = Order::create([
                 'customer_id' => auth()->id(),
                 'farmer_profile_id' => $product->farmer_profile_id,
                 'market_id' => $pickupSlot->market_id,
+                'pickup_slot_id' => $pickupSlot->id,
                 'pickup_date' => $pickupSlot->date,
                 'pickup_time' => $pickupSlot->start_time,
                 'total_amount' => $subtotal,
@@ -87,19 +164,15 @@ class OrderController extends Controller
                 'notes' => $validated['notes'] ?? null,
             ]);
 
-           $order = Order::create([
-    'customer_id' => auth()->id(),
-    'farmer_profile_id' => $product->farmer_profile_id,
-    'market_id' => $pickupSlot->market_id,
-    'pickup_slot_id' => $pickupSlot->id,
-    'pickup_date' => $pickupSlot->date,
-    'pickup_time' => $pickupSlot->start_time,
-    'total_amount' => $subtotal,
-    'status' => 'placed',
-    'notes' => $validated['notes'] ?? null,
-]);
+            OrderItem::create([
+                'order_id' => $order->id,
+                'product_id' => $product->id,
+                'product_name' => $product->name,
+                'price' => $product->price,
+                'quantity' => $validated['quantity'],
+                'subtotal' => $subtotal,
+            ]);
 
-            // Decrement product stock
             $product->decrement('stock_quantity', $validated['quantity']);
         });
 
@@ -117,14 +190,17 @@ class OrderController extends Controller
 
         $order->load(['farmer', 'market', 'items.product']);
 
-        // Collect product IDs in this order
-        $productIds = $order->items->pluck('product_id')->filter()->unique();
+        // Collect product IDs in this order.
+        $productIds = $order->items
+            ->pluck('product_id')
+            ->filter()
+            ->unique();
 
-        // Find reviews already left by this customer for those products
+        // Find reviews already left by this customer for those products.
         $existingReviews = Review::where('customer_id', auth()->id())
             ->whereIn('product_id', $productIds)
             ->pluck('product_id')
-            ->flip(); // keyed by product_id for easy lookup
+            ->flip();
 
         return view('customer.orders.show', compact('order', 'existingReviews'));
     }
@@ -142,7 +218,7 @@ class OrderController extends Controller
                 ->with('error', 'Only orders with status "placed" can be cancelled.');
         }
 
-        // Restore stock
+        // Restore stock.
         foreach ($order->items as $item) {
             if ($item->product_id) {
                 Product::where('id', $item->product_id)
