@@ -87,14 +87,17 @@ class OrderController extends Controller
                 'notes' => $validated['notes'] ?? null,
             ]);
 
-            OrderItem::create([
-                'order_id' => $order->id,
-                'product_id' => $product->id,
-                'product_name' => $product->name,
-                'price' => $product->price,
-                'quantity' => $validated['quantity'],
-                'subtotal' => $subtotal,
-            ]);
+           $order = Order::create([
+    'customer_id' => auth()->id(),
+    'farmer_profile_id' => $product->farmer_profile_id,
+    'market_id' => $pickupSlot->market_id,
+    'pickup_slot_id' => $pickupSlot->id,
+    'pickup_date' => $pickupSlot->date,
+    'pickup_time' => $pickupSlot->start_time,
+    'total_amount' => $subtotal,
+    'status' => 'placed',
+    'notes' => $validated['notes'] ?? null,
+]);
 
             // Decrement product stock
             $product->decrement('stock_quantity', $validated['quantity']);

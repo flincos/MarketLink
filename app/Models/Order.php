@@ -14,6 +14,7 @@ class Order extends Model
         'market_id',
         'pickup_date',
         'pickup_time',
+        'pickup_slot_id',
         'total_amount',
         'status',
         'notes',
@@ -43,4 +44,8 @@ class Order extends Model
     {
         return $this->hasMany(OrderItem::class);
     }
+    public function pickupSlot(): BelongsTo
+{
+    return $this->belongsTo(PickupSlot::class);
+}
 }
