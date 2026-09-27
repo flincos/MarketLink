@@ -34,14 +34,19 @@ class Product extends Model
     {
         return $this->belongsTo(Category::class);
     }
-    public function favorites(): HasMany
-{
-    return $this->hasMany(Favorite::class);
-}
 
-public function reviews(): HasMany
-{
-    return $this->hasMany(Review::class);
-}
-    
+    public function favorites(): HasMany
+    {
+        return $this->hasMany(Favorite::class, 'product_id');
+    }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class);
+    }
+
+    public function orderItems(): HasMany
+    {
+        return $this->hasMany(OrderItem::class);
+    }
 }

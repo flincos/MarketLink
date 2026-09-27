@@ -2,9 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-use Illuminate\Database\Seeder;
 use App\Models\User;
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
 class RoleTestUsersSeeder extends Seeder
@@ -14,33 +13,42 @@ class RoleTestUsersSeeder extends Seeder
      */
     public function run(): void
     {
-        User::create([
-            'name' => 'Admin User',
-            'email' => 'admin@marketlink.test',
-            'password' => Hash::make('password'),
-            'role' => 'admin',
-        ]);
+        User::firstOrCreate(
+            ['email' => 'admin@marketlink.test'],
+            [
+                'name' => 'Admin User',
+                'password' => Hash::make('password'),
+                'role' => 'admin',
+            ]
+        );
 
-        $farmer = User::create([
-            'name' => 'Farmer User',
-            'email' => 'farmer@marketlink.test',
-            'password' => Hash::make('password'),
-            'role' => 'farmer',
-        ]);
+        $farmer = User::firstOrCreate(
+            ['email' => 'farmer@marketlink.test'],
+            [
+                'name' => 'Farmer User',
+                'password' => Hash::make('password'),
+                'role' => 'farmer',
+            ]
+        );
 
-        $farmer->farmerProfile()->create([
-            'stall_name' => 'Green Valley Produce',
-            'contact_person' => 'Farmer User',
-            'contact_number' => '0771234567',
-            'address' => '123 Karachi Street',
-            'status' => 'approved',
-        ]);
+        // Create farmerProfile only if it doesn't already exist
+        if (! $farmer->farmerProfile) {
+            $farmer->farmerProfile()->create([
+                'stall_name' => 'Green Valley Produce',
+                'contact_person' => 'Farmer User',
+                'contact_number' => '0771234567',
+                'address' => '123 Karachi Street',
+                'status' => 'approved',
+            ]);
+        }
 
-        User::create([
-            'name' => 'Customer User',
-            'email' => 'customer@marketlink.test',
-            'password' => Hash::make('password'),
-            'role' => 'customer',
-        ]);
+        User::firstOrCreate(
+            ['email' => 'customer@marketlink.test'],
+            [
+                'name' => 'Customer User',
+                'password' => Hash::make('password'),
+                'role' => 'customer',
+            ]
+        );
     }
 }

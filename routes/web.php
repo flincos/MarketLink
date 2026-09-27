@@ -1,16 +1,20 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-
-use App\Http\Controllers\ProfileController as UserProfileController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Customer\FarmerController as CustomerFarmerController;
+use App\Http\Controllers\Customer\FavoriteController as CustomerFavoriteController;
+use App\Http\Controllers\Customer\MarketController as CustomerMarketController;
+use App\Http\Controllers\Customer\NotificationController as CustomerNotificationController;
+use App\Http\Controllers\Customer\ProductController as CustomerProductController;
 use App\Http\Controllers\Farmer\DashboardController;
-use App\Http\Controllers\Farmer\ProfileController;
 use App\Http\Controllers\Farmer\MarketController;
-use App\Http\Controllers\Farmer\PickupSlotController;
 use App\Http\Controllers\Farmer\OrderController;
-use App\Http\Controllers\Farmer\ReviewController;
+use App\Http\Controllers\Farmer\PickupSlotController;
 use App\Http\Controllers\Farmer\ProductController;
+use App\Http\Controllers\Farmer\ReviewController;
 use App\Http\Controllers\FarmerProfileController;
+use App\Http\Controllers\ProfileController as UserProfileController;
+use Illuminate\Support\Facades\Route;
 
 // Home
 Route::get('/', function () {
@@ -50,16 +54,28 @@ Route::middleware(['auth', 'role:farmer'])->group(function () {
 
 // Admin dashboard
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
-    Route::get('/dashboard', fn () => view('admin.dashboard'))
+    Route::get('/dashboard', [App\Http\Controllers\Admin\DashboardController::class, 'index'])
         ->name('admin.dashboard');
+
+    Route::get('/farmers', [UserController::class, 'farmers'])
+        ->name('admin.farmers.index');
+    Route::patch('/farmers/{farmer}/approve', [UserController::class, 'approve'])
+        ->name('admin.farmers.approve');
+    Route::patch('/farmers/{farmer}/suspend', [UserController::class, 'suspend'])
+        ->name('admin.farmers.suspend');
+
+    Route::get('/users', [UserController::class, 'index'])
+        ->name('admin.users.index');
 });
 
 // Farmer routes
 Route::middleware(['auth', 'role:farmer'])->prefix('farmer')->group(function () {
 
+    // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])
         ->name('farmer.dashboard');
 
+    // Profile
     Route::get('/profile', [FarmerProfileController::class, 'edit'])
         ->name('farmer.profile');
 
@@ -138,10 +154,78 @@ Route::middleware(['auth', 'role:farmer'])->prefix('farmer')->group(function () 
         ->name('farmer.products.destroy');
 });
 
-// Customer dashboard
+// Customer routes
 Route::middleware(['auth', 'role:customer'])->prefix('customer')->group(function () {
-    Route::get('/dashboard', fn () => view('customer.dashboard'))
-        ->name('customer.dashboard');
+
+    // Dashboard
+    Route::get('/dashboard', [
+        App\Http\Controllers\Customer\DashboardController::class,
+        'index',
+    ])->name('customer.dashboard');
+
+    // Product discovery
+    Route::get('/products', [CustomerProductController::class, 'index'])
+        ->name('customer.products.index');
+
+    Route::get('/products/{product}', [CustomerProductController::class, 'show'])
+        ->name('customer.products.show');
+
+    // Favorites
+    Route::get('/favorites', [CustomerFavoriteController::class, 'index'])
+        ->name('customer.favorites.index');
+
+    Route::post('/favorites/products/{product}', [CustomerFavoriteController::class, 'storeProduct'])
+        ->name('customer.favorites.products.store');
+
+    Route::delete('/favorites/products/{product}', [CustomerFavoriteController::class, 'destroyProduct'])
+        ->name('customer.favorites.products.destroy');
+
+    Route::post('/favorites/farmers/{farmer}', [CustomerFavoriteController::class, 'storeFarmer'])
+        ->name('customer.favorites.farmers.store');
+
+    Route::delete('/favorites/farmers/{farmer}', [CustomerFavoriteController::class, 'destroyFarmer'])
+        ->name('customer.favorites.farmers.destroy');
+
+    // Farmer discovery
+    Route::get('/farmers', [CustomerFarmerController::class, 'index'])
+        ->name('customer.farmers.index');
+
+    Route::get('/farmers/{farmer}', [CustomerFarmerController::class, 'show'])
+        ->name('customer.farmers.show');
+
+    // Market discovery
+    Route::get('/markets', [CustomerMarketController::class, 'index'])
+        ->name('customer.markets.index');
+
+    Route::get('/markets/{market}', [CustomerMarketController::class, 'show'])
+        ->name('customer.markets.show');
+
+    // Preferred markets
+    Route::post('/favorites/markets/{market}', [CustomerFavoriteController::class, 'storeMarket'])
+        ->name('customer.favorites.markets.store');
+
+    Route::delete('/favorites/markets/{market}', [CustomerFavoriteController::class, 'destroyMarket'])
+        ->name('customer.favorites.markets.destroy');
+
+    // Customer notifications
+    Route::get('/notifications', [CustomerNotificationController::class, 'index'])
+        ->name('customer.notifications.index');
+
+    Route::patch('/notifications/{id}/read', [CustomerNotificationController::class, 'markAsRead'])
+        ->name('customer.notifications.read');
+
+    Route::patch('/notifications/read-all', [CustomerNotificationController::class, 'markAllAsRead'])
+        ->name('customer.notifications.readAll');
+
+    // Customer Orders
+    Route::get('/orders', [App\Http\Controllers\Customer\OrderController::class, 'index'])->name('customer.orders.index');
+    Route::get('/orders/create', [App\Http\Controllers\Customer\OrderController::class, 'create'])->name('customer.orders.create');
+    Route::post('/orders', [App\Http\Controllers\Customer\OrderController::class, 'store'])->name('customer.orders.store');
+    Route::get('/orders/{order}', [App\Http\Controllers\Customer\OrderController::class, 'show'])->name('customer.orders.show');
+    Route::patch('/orders/{order}/cancel', [App\Http\Controllers\Customer\OrderController::class, 'cancel'])->name('customer.orders.cancel');
+
+    // Customer Reviews
+    Route::post('/reviews', [App\Http\Controllers\Customer\ReviewController::class, 'store'])->name('customer.reviews.store');
 });
 
 // Static pages

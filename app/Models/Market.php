@@ -17,6 +17,6 @@ class Market extends Model
 
     public function farmers(): BelongsToMany
     {
-        return $this->belongsToMany(FarmerProfile::class);
+        return $this->belongsToMany(FarmerProfile::class, 'market_farmer');
     }
 }
