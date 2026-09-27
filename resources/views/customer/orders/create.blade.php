@@ -1,16 +1,4 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-            Place Pre-Order
-        </h2>
-    </x-slot>
-
-    <div class="py-8">
-        <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-
-            {{-- Validation Errors --}}
-            @if ($errors->any())
-                <div class="mb-6 p-4 bg-red-100 border border-red-300 text-red-800 rounded-lg">
+d-800 rounded-lg">
                     <ul class="list-disc list-inside space-y-1 text-sm">
                         @foreach ($errors->all() as $error)
                             <li>{{ $error }}</li>
@@ -170,3 +158,6 @@
         </div>
     </div>
 </x-app-layout>
+
+C:\laragon\www\MarketLink(feature/phase5-customer-discovery)
+λ

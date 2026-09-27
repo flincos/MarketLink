@@ -19,7 +19,7 @@ class OrderController extends Controller
      */
     public function index()
     {
-        $orders = Order::with(['farmer', 'market', 'items'])
+        $orders = Order::with(['farmer', 'market', 'pickupSlot', 'items'])
             ->where('customer_id', auth()->id())
             ->latest()
             ->paginate(10);
@@ -28,71 +28,146 @@ class OrderController extends Controller
     }
 
     /**
-     * Show the pre-order form for a specific product.
-     * Requires ?product_id= query parameter.
+     * Show the checkout form for the current cart.
      */
-    public function create(Request $request)
+    public function create()
     {
-        $request->validate([
-            'product_id' => 'required|exists:products,id',
-        ]);
+        $cart = session('customer_cart', []);
 
-        $product = Product::with(['farmer.pickupSlots.market'])
-            ->findOrFail($request->product_id);
+        if (empty($cart)) {
+            return redirect()
+                ->route('customer.cart.index')
+                ->withErrors([
+                    'cart' => 'Your cart is empty.',
+                ]);
+        }
 
-        // Only show available pickup slots belonging to this farmer.
+        $productIds = array_map('intval', array_keys($cart));
+
+        $products = Product::with('farmer')
+            ->whereIn('id', $productIds)
+            ->get()
+            ->keyBy('id');
+
+        if ($products->count() !== count($productIds)) {
+            return redirect()
+                ->route('customer.cart.index')
+                ->withErrors([
+                    'cart' => 'One or more products in your cart are no longer available.',
+                ]);
+        }
+
+        $farmerIds = $products->pluck('farmer_profile_id')->unique();
+
+        if ($farmerIds->count() !== 1) {
+            return redirect()
+                ->route('customer.cart.index')
+                ->withErrors([
+                    'cart' => 'Your cart can only contain products from one farmer.',
+                ]);
+        }
+
+        $farmer = $products->first()->farmer;
+
+        if (! $farmer || $farmer->status !== 'approved') {
+            return redirect()
+                ->route('customer.cart.index')
+                ->withErrors([
+                    'cart' => 'This farmer is not currently approved.',
+                ]);
+        }
+
         $pickupSlots = PickupSlot::with('market')
-            ->where('farmer_profile_id', $product->farmer_profile_id)
+            ->where('farmer_profile_id', $farmer->id)
             ->where('is_available', true)
-            ->where('date', '>=', now()->toDateString())
+            ->where('date', '>=', today())
             ->orderBy('date')
             ->orderBy('start_time')
             ->get();
 
-        return view('customer.orders.create', compact('product', 'pickupSlots'));
+        return view('customer.orders.create', compact(
+            'products',
+            'cart',
+            'pickupSlots',
+            'farmer'
+        ));
     }
 
     /**
-     * Place (store) a new order.
+     * Place an order from the customer's cart.
      */
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'product_id' => 'required|exists:products,id',
-            'quantity' => 'required|integer|min:1',
             'pickup_slot_id' => 'required|exists:pickup_slots,id',
             'notes' => 'nullable|string|max:500',
         ]);
 
-        DB::transaction(function () use ($validated) {
-            // Lock the product so concurrent checkouts cannot consume
-            // the same stock simultaneously.
-            $product = Product::with('farmer')
-                ->lockForUpdate()
-                ->findOrFail($validated['product_id']);
+        $cart = session('customer_cart', []);
 
-            if (! $product->is_available || $product->is_hidden) {
+        if (empty($cart)) {
+            throw ValidationException::withMessages([
+                'cart' => 'Your cart is empty.',
+            ]);
+        }
+
+        DB::transaction(function () use ($validated, $cart) {
+            $productIds = array_map('intval', array_keys($cart));
+
+            $products = Product::with('farmer')
+                ->whereIn('id', $productIds)
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id');
+
+            if ($products->count() !== count($productIds)) {
                 throw ValidationException::withMessages([
-                    'product_id' => 'This product is not currently available.',
+                    'cart' => 'One or more products in your cart are no longer available.',
                 ]);
             }
 
-            $farmer = $product->farmer;
+            $farmerIds = $products
+                ->pluck('farmer_profile_id')
+                ->unique();
+
+            if ($farmerIds->count() !== 1) {
+                throw ValidationException::withMessages([
+                    'cart' => 'Your cart can only contain products from one farmer.',
+                ]);
+            }
+
+            $farmer = $products->first()->farmer;
 
             if (! $farmer || $farmer->status !== 'approved') {
                 throw ValidationException::withMessages([
-                    'product_id' => 'This farmer is not currently approved.',
+                    'cart' => 'This farmer is not currently approved.',
                 ]);
             }
 
-            if ($product->stock_quantity < $validated['quantity']) {
-                throw ValidationException::withMessages([
-                    'quantity' => 'Not enough stock. Only ' . $product->stock_quantity . ' available.',
-                ]);
+            foreach ($products as $product) {
+                $quantity = (int) ($cart[$product->id] ?? 0);
+
+                if ($quantity < 1) {
+                    throw ValidationException::withMessages([
+                        'cart' => 'Your cart contains an invalid quantity.',
+                    ]);
+                }
+
+                if (! $product->is_available || $product->is_hidden) {
+                    throw ValidationException::withMessages([
+                        'cart' => $product->name . ' is no longer available.',
+                    ]);
+                }
+
+                if ($product->stock_quantity < $quantity) {
+                    throw ValidationException::withMessages([
+                        'cart' => 'Not enough stock for ' . $product->name .
+                            '. Only ' . $product->stock_quantity . ' available.',
+                    ]);
+                }
             }
 
-            // Lock the pickup slot so concurrent checkouts cannot
-            // exceed its capacity.
             $pickupSlot = PickupSlot::query()
                 ->lockForUpdate()
                 ->findOrFail($validated['pickup_slot_id']);
@@ -109,14 +184,12 @@ class OrderController extends Controller
                 ]);
             }
 
-            // The selected slot must belong to the same farmer as the product.
-            if ($pickupSlot->farmer_profile_id !== $product->farmer_profile_id) {
+            if ($pickupSlot->farmer_profile_id !== $farmer->id) {
                 throw ValidationException::withMessages([
                     'pickup_slot_id' => 'The selected pickup slot does not belong to this farmer.',
                 ]);
             }
 
-            // The slot's market must still belong to the farmer.
             $marketBelongsToFarmer = $farmer->markets()
                 ->whereKey($pickupSlot->market_id)
                 ->exists();
@@ -127,7 +200,6 @@ class OrderController extends Controller
                 ]);
             }
 
-            // Enforce the farmer's cutoff time for same-day pickup orders.
             if (
                 $pickupSlot->date->isToday()
                 && $farmer->order_cutoff_time
@@ -138,7 +210,6 @@ class OrderController extends Controller
                 ]);
             }
 
-            // Only active orders consume pickup-slot capacity.
             $activeOrders = Order::query()
                 ->where('pickup_slot_id', $pickupSlot->id)
                 ->whereIn('status', ['placed', 'accepted', 'ready'])
@@ -150,30 +221,42 @@ class OrderController extends Controller
                 ]);
             }
 
-            $subtotal = $product->price * $validated['quantity'];
+            $totalAmount = 0;
+
+            foreach ($products as $product) {
+                $quantity = (int) $cart[$product->id];
+                $totalAmount += $product->price * $quantity;
+            }
 
             $order = Order::create([
                 'customer_id' => auth()->id(),
-                'farmer_profile_id' => $product->farmer_profile_id,
+                'farmer_profile_id' => $farmer->id,
                 'market_id' => $pickupSlot->market_id,
                 'pickup_slot_id' => $pickupSlot->id,
                 'pickup_date' => $pickupSlot->date,
                 'pickup_time' => $pickupSlot->start_time,
-                'total_amount' => $subtotal,
+                'total_amount' => $totalAmount,
                 'status' => 'placed',
                 'notes' => $validated['notes'] ?? null,
             ]);
 
-            OrderItem::create([
-                'order_id' => $order->id,
-                'product_id' => $product->id,
-                'product_name' => $product->name,
-                'price' => $product->price,
-                'quantity' => $validated['quantity'],
-                'subtotal' => $subtotal,
-            ]);
+            foreach ($products as $product) {
+                $quantity = (int) $cart[$product->id];
+                $subtotal = $product->price * $quantity;
 
-            $product->decrement('stock_quantity', $validated['quantity']);
+                OrderItem::create([
+                    'order_id' => $order->id,
+                    'product_id' => $product->id,
+                    'product_name' => $product->name,
+                    'price' => $product->price,
+                    'quantity' => $quantity,
+                    'subtotal' => $subtotal,
+                ]);
+
+                $product->decrement('stock_quantity', $quantity);
+            }
+
+            session()->forget('customer_cart');
         });
 
         return redirect()
@@ -188,25 +271,31 @@ class OrderController extends Controller
     {
         abort_if($order->customer_id !== auth()->id(), 403);
 
-        $order->load(['farmer', 'market', 'items.product']);
+        $order->load([
+            'farmer',
+            'market',
+            'pickupSlot',
+            'items.product',
+        ]);
 
-        // Collect product IDs in this order.
         $productIds = $order->items
             ->pluck('product_id')
             ->filter()
             ->unique();
 
-        // Find reviews already left by this customer for those products.
         $existingReviews = Review::where('customer_id', auth()->id())
             ->whereIn('product_id', $productIds)
             ->pluck('product_id')
             ->flip();
 
-        return view('customer.orders.show', compact('order', 'existingReviews'));
+        return view(
+            'customer.orders.show',
+            compact('order', 'existingReviews')
+        );
     }
 
     /**
-     * Cancel an order (only if status is 'placed').
+     * Cancel an order that is still in placed status.
      */
     public function cancel(Order $order)
     {
@@ -218,15 +307,40 @@ class OrderController extends Controller
                 ->with('error', 'Only orders with status "placed" can be cancelled.');
         }
 
-        // Restore stock.
-        foreach ($order->items as $item) {
-            if ($item->product_id) {
-                Product::where('id', $item->product_id)
-                    ->increment('stock_quantity', $item->quantity);
-            }
-        }
+        DB::transaction(function () use ($order) {
+            $order->load('items');
 
-        $order->update(['status' => 'cancelled']);
+            $lockedOrder = Order::query()
+                ->lockForUpdate()
+                ->findOrFail($order->id);
+
+            if (
+                $lockedOrder->customer_id !== auth()->id()
+                || $lockedOrder->status !== 'placed'
+            ) {
+                throw ValidationException::withMessages([
+                    'order' => 'This order can no longer be cancelled.',
+                ]);
+            }
+
+            $items = $lockedOrder->items;
+
+            foreach ($items as $item) {
+                if ($item->product_id) {
+                    Product::query()
+                        ->whereKey($item->product_id)
+                        ->lockForUpdate()
+                        ->first()?->increment(
+                            'stock_quantity',
+                            $item->quantity
+                        );
+                }
+            }
+
+            $lockedOrder->update([
+                'status' => 'cancelled',
+            ]);
+        });
 
         return redirect()
             ->route('customer.orders.index')
