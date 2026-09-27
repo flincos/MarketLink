@@ -25,6 +25,7 @@ use App\Http\Controllers\Farmer\ReviewController;
 use App\Http\Controllers\FarmerProfileController;
 use App\Http\Controllers\ProfileController as UserProfileController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Customer\CartController;
 
 // Home
 Route::get('/', function () {
@@ -282,6 +283,22 @@ Route::middleware(['auth', 'role:customer'])
 
         Route::patch('/notifications/read-all', [CustomerNotificationController::class, 'markAllAsRead'])
             ->name('customer.notifications.readAll');
+        
+        // Cart
+Route::get('/cart', [CartController::class, 'index'])
+    ->name('customer.cart.index');
+
+Route::post('/cart', [CartController::class, 'store'])
+    ->name('customer.cart.store');
+
+Route::patch('/cart/{product}', [CartController::class, 'update'])
+    ->name('customer.cart.update');
+
+Route::delete('/cart/{product}', [CartController::class, 'destroy'])
+    ->name('customer.cart.destroy');
+
+Route::delete('/cart', [CartController::class, 'clear'])
+    ->name('customer.cart.clear');
 
         // Orders
         Route::get('/orders', [CustomerOrderController::class, 'index'])
