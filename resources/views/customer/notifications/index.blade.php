@@ -8,7 +8,6 @@
     <div class="py-8">
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
 
-            {{-- Mark All as Read --}}
             @if ($notifications->whereNull('read_at')->count() > 0)
                 <form
                     method="POST"
@@ -26,7 +25,6 @@
                 </form>
             @endif
 
-            {{-- Notifications List --}}
             @forelse ($notifications as $notification)
                 <div class="mb-4 rounded-lg shadow p-5
                     {{ $notification->read_at
@@ -34,14 +32,14 @@
                         : 'bg-indigo-50 dark:bg-gray-700 border-l-4 border-indigo-600' }}">
 
                     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-
                         <div>
                             <h3 class="font-semibold text-gray-900 dark:text-gray-100">
-                                {{ $notification->data['product_name'] ?? 'Notification' }}
+                                {{ $notification->data['message'] ?? 'Notification' }}
                             </h3>
 
                             <p class="mt-2 text-sm text-gray-700 dark:text-gray-300">
-                                {{ $notification->data['message'] ?? 'You have a new notification.' }}
+                                Type:
+                                {{ $notification->data['type'] ?? class_basename($notification->type) }}
                             </p>
 
                             <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
@@ -76,7 +74,6 @@
                                 Read
                             </span>
                         @endif
-
                     </div>
                 </div>
             @empty

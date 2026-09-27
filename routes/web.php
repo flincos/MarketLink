@@ -1,11 +1,21 @@
 <?php
 
+use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\CustomerController as AdminCustomerController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\FarmerController as AdminFarmerController;
+use App\Http\Controllers\Admin\MarketController as AdminMarketController;
+use App\Http\Controllers\Admin\ProductModerationController;
+use App\Http\Controllers\Admin\ReviewModerationController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Customer\DashboardController as CustomerDashboardController;
 use App\Http\Controllers\Customer\FarmerController as CustomerFarmerController;
 use App\Http\Controllers\Customer\FavoriteController as CustomerFavoriteController;
 use App\Http\Controllers\Customer\MarketController as CustomerMarketController;
 use App\Http\Controllers\Customer\NotificationController as CustomerNotificationController;
+use App\Http\Controllers\Customer\OrderController as CustomerOrderController;
 use App\Http\Controllers\Customer\ProductController as CustomerProductController;
+use App\Http\Controllers\Customer\ReviewController as CustomerReviewController;
 use App\Http\Controllers\Farmer\DashboardController;
 use App\Http\Controllers\Farmer\MarketController;
 use App\Http\Controllers\Farmer\OrderController;
@@ -52,181 +62,243 @@ Route::middleware(['auth', 'role:farmer'])->group(function () {
         ->name('farmer.profile.store');
 });
 
-// Admin dashboard
-Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
-    Route::get('/dashboard', [App\Http\Controllers\Admin\DashboardController::class, 'index'])
-        ->name('admin.dashboard');
+// Admin routes
+Route::middleware(['auth', 'role:admin'])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
 
-    Route::get('/farmers', [UserController::class, 'farmers'])
-        ->name('admin.farmers.index');
-    Route::patch('/farmers/{farmer}/approve', [UserController::class, 'approve'])
-        ->name('admin.farmers.approve');
-    Route::patch('/farmers/{farmer}/suspend', [UserController::class, 'suspend'])
-        ->name('admin.farmers.suspend');
+        // Dashboard
+        Route::get('/dashboard', [AdminDashboardController::class, 'index'])
+            ->name('dashboard');
 
-    Route::get('/users', [UserController::class, 'index'])
-        ->name('admin.users.index');
-});
+        // Farmer management
+        Route::get('/farmers', [AdminFarmerController::class, 'index'])
+            ->name('farmers.index');
+
+        Route::patch('/farmers/{farmerProfile}/approve', [AdminFarmerController::class, 'approve'])
+            ->name('farmers.approve');
+
+        Route::patch('/farmers/{farmerProfile}/suspend', [AdminFarmerController::class, 'suspend'])
+            ->name('farmers.suspend');
+
+        // Customer management
+        Route::get('/customers', [AdminCustomerController::class, 'index'])
+            ->name('customers.index');
+
+        Route::patch('/customers/{user}/activate', [AdminCustomerController::class, 'activate'])
+            ->name('customers.activate');
+
+        Route::patch('/customers/{user}/deactivate', [AdminCustomerController::class, 'deactivate'])
+            ->name('customers.deactivate');
+
+        // Existing user management
+        Route::get('/users', [UserController::class, 'index'])
+            ->name('users.index');
+
+        // Product moderation
+        Route::get('/products', [ProductModerationController::class, 'index'])
+            ->name('products.index');
+
+        Route::patch('/products/{product}/hide', [ProductModerationController::class, 'hide'])
+            ->name('products.hide');
+
+        Route::patch('/products/{product}/unhide', [ProductModerationController::class, 'unhide'])
+            ->name('products.unhide');
+
+        // Review moderation
+        Route::get('/reviews', [ReviewModerationController::class, 'index'])
+            ->name('reviews.index');
+
+        Route::patch('/reviews/{review}/hide', [ReviewModerationController::class, 'hide'])
+            ->name('reviews.hide');
+
+        Route::patch('/reviews/{review}/unhide', [ReviewModerationController::class, 'unhide'])
+            ->name('reviews.unhide');
+
+        // Categories
+        Route::resource('categories', CategoryController::class)
+            ->except(['show']);
+
+        // Markets
+        Route::resource('markets', AdminMarketController::class)
+            ->except(['show']);
+
+        Route::get('/markets/map', [AdminMarketController::class, 'map'])
+            ->name('markets.map');
+    });
 
 // Farmer routes
-Route::middleware(['auth', 'role:farmer'])->prefix('farmer')->group(function () {
+Route::middleware(['auth', 'role:farmer'])
+    ->prefix('farmer')
+    ->group(function () {
 
-    // Dashboard
-    Route::get('/dashboard', [DashboardController::class, 'index'])
-        ->name('farmer.dashboard');
+        // Dashboard
+        Route::get('/dashboard', [DashboardController::class, 'index'])
+            ->name('farmer.dashboard');
 
-    // Profile
-    Route::get('/profile', [FarmerProfileController::class, 'edit'])
-        ->name('farmer.profile');
+        // Profile
+        Route::get('/profile', [FarmerProfileController::class, 'edit'])
+            ->name('farmer.profile');
 
-    Route::put('/profile', [FarmerProfileController::class, 'update'])
-        ->name('farmer.profile.update');
+        Route::put('/profile', [FarmerProfileController::class, 'update'])
+            ->name('farmer.profile.update');
 
-    // Markets
-    Route::get('/markets', [MarketController::class, 'index'])
-        ->name('farmer.markets.index');
+        // Markets
+        Route::get('/markets', [MarketController::class, 'index'])
+            ->name('farmer.markets.index');
 
-    Route::get('/markets/create', [MarketController::class, 'create'])
-        ->name('farmer.markets.create');
+        Route::get('/markets/create', [MarketController::class, 'create'])
+            ->name('farmer.markets.create');
 
-    Route::post('/markets', [MarketController::class, 'store'])
-        ->name('farmer.markets.store');
+        Route::post('/markets', [MarketController::class, 'store'])
+            ->name('farmer.markets.store');
 
-    Route::delete('/markets/{market}', [MarketController::class, 'destroy'])
-        ->name('farmer.markets.destroy');
+        Route::delete('/markets/{market}', [MarketController::class, 'destroy'])
+            ->name('farmer.markets.destroy');
 
-    // Pickup slots
-    Route::get('/pickup-slots', [PickupSlotController::class, 'index'])
-        ->name('farmer.pickup-slots.index');
+        // Pickup slots
+        Route::get('/pickup-slots', [PickupSlotController::class, 'index'])
+            ->name('farmer.pickup-slots.index');
 
-    Route::get('/pickup-slots/create', [PickupSlotController::class, 'create'])
-        ->name('farmer.pickup-slots.create');
+        Route::get('/pickup-slots/create', [PickupSlotController::class, 'create'])
+            ->name('farmer.pickup-slots.create');
 
-    Route::post('/pickup-slots', [PickupSlotController::class, 'store'])
-        ->name('farmer.pickup-slots.store');
+        Route::post('/pickup-slots', [PickupSlotController::class, 'store'])
+            ->name('farmer.pickup-slots.store');
 
-    Route::get('/pickup-slots/{pickupSlot}/edit', [PickupSlotController::class, 'edit'])
-        ->name('farmer.pickup-slots.edit');
+        Route::get('/pickup-slots/{pickupSlot}/edit', [PickupSlotController::class, 'edit'])
+            ->name('farmer.pickup-slots.edit');
 
-    Route::put('/pickup-slots/{pickupSlot}', [PickupSlotController::class, 'update'])
-        ->name('farmer.pickup-slots.update');
+        Route::put('/pickup-slots/{pickupSlot}', [PickupSlotController::class, 'update'])
+            ->name('farmer.pickup-slots.update');
 
-    Route::delete('/pickup-slots/{pickupSlot}', [PickupSlotController::class, 'destroy'])
-        ->name('farmer.pickup-slots.destroy');
+        Route::delete('/pickup-slots/{pickupSlot}', [PickupSlotController::class, 'destroy'])
+            ->name('farmer.pickup-slots.destroy');
 
-    // Orders
-    Route::get('/orders', [OrderController::class, 'index'])
-        ->name('farmer.orders.index');
+        // Orders
+        Route::get('/orders', [OrderController::class, 'index'])
+            ->name('farmer.orders.index');
 
-    Route::get('/orders/{order}', [OrderController::class, 'show'])
-        ->name('farmer.orders.show');
+        Route::get('/orders/{order}', [OrderController::class, 'show'])
+            ->name('farmer.orders.show');
 
-    Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus'])
-        ->name('farmer.orders.update-status');
+        Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus'])
+            ->name('farmer.orders.update-status');
 
-    Route::get('/orders/history', [OrderController::class, 'history'])
-        ->name('farmer.orders.history');
+        Route::get('/orders/history', [OrderController::class, 'history'])
+            ->name('farmer.orders.history');
 
-    // Reviews
-    Route::get('/reviews', [ReviewController::class, 'index'])
-        ->name('farmer.reviews.index');
+        // Reviews
+        Route::get('/reviews', [ReviewController::class, 'index'])
+            ->name('farmer.reviews.index');
 
-    Route::patch('/reviews/{review}/respond', [ReviewController::class, 'respond'])
-        ->name('farmer.reviews.respond');
+        Route::patch('/reviews/{review}/respond', [ReviewController::class, 'respond'])
+            ->name('farmer.reviews.respond');
 
-    // Products
-    Route::get('/products', [ProductController::class, 'index'])
-        ->name('farmer.products.index');
+        // Products
+        Route::get('/products', [ProductController::class, 'index'])
+            ->name('farmer.products.index');
 
-    Route::get('/products/create', [ProductController::class, 'create'])
-        ->name('farmer.products.create');
+        Route::get('/products/create', [ProductController::class, 'create'])
+            ->name('farmer.products.create');
 
-    Route::post('/products', [ProductController::class, 'store'])
-        ->name('farmer.products.store');
+        Route::post('/products', [ProductController::class, 'store'])
+            ->name('farmer.products.store');
 
-    Route::get('/products/{product}/edit', [ProductController::class, 'edit'])
-        ->name('farmer.products.edit');
+        Route::get('/products/{product}/edit', [ProductController::class, 'edit'])
+            ->name('farmer.products.edit');
 
-    Route::put('/products/{product}', [ProductController::class, 'update'])
-        ->name('farmer.products.update');
+        Route::put('/products/{product}', [ProductController::class, 'update'])
+            ->name('farmer.products.update');
 
-    Route::delete('/products/{product}', [ProductController::class, 'destroy'])
-        ->name('farmer.products.destroy');
-});
+        Route::delete('/products/{product}', [ProductController::class, 'destroy'])
+            ->name('farmer.products.destroy');
+    });
 
 // Customer routes
-Route::middleware(['auth', 'role:customer'])->prefix('customer')->group(function () {
+Route::middleware(['auth', 'role:customer'])
+    ->prefix('customer')
+    ->group(function () {
 
-    // Dashboard
-    Route::get('/dashboard', [
-        App\Http\Controllers\Customer\DashboardController::class,
-        'index',
-    ])->name('customer.dashboard');
+        // Dashboard
+        Route::get('/dashboard', [CustomerDashboardController::class, 'index'])
+            ->name('customer.dashboard');
 
-    // Product discovery
-    Route::get('/products', [CustomerProductController::class, 'index'])
-        ->name('customer.products.index');
+        // Product discovery
+        Route::get('/products', [CustomerProductController::class, 'index'])
+            ->name('customer.products.index');
 
-    Route::get('/products/{product}', [CustomerProductController::class, 'show'])
-        ->name('customer.products.show');
+        Route::get('/products/{product}', [CustomerProductController::class, 'show'])
+            ->name('customer.products.show');
 
-    // Favorites
-    Route::get('/favorites', [CustomerFavoriteController::class, 'index'])
-        ->name('customer.favorites.index');
+        // Favorites
+        Route::get('/favorites', [CustomerFavoriteController::class, 'index'])
+            ->name('customer.favorites.index');
 
-    Route::post('/favorites/products/{product}', [CustomerFavoriteController::class, 'storeProduct'])
-        ->name('customer.favorites.products.store');
+        Route::post('/favorites/products/{product}', [CustomerFavoriteController::class, 'storeProduct'])
+            ->name('customer.favorites.products.store');
 
-    Route::delete('/favorites/products/{product}', [CustomerFavoriteController::class, 'destroyProduct'])
-        ->name('customer.favorites.products.destroy');
+        Route::delete('/favorites/products/{product}', [CustomerFavoriteController::class, 'destroyProduct'])
+            ->name('customer.favorites.products.destroy');
 
-    Route::post('/favorites/farmers/{farmer}', [CustomerFavoriteController::class, 'storeFarmer'])
-        ->name('customer.favorites.farmers.store');
+        Route::post('/favorites/farmers/{farmer}', [CustomerFavoriteController::class, 'storeFarmer'])
+            ->name('customer.favorites.farmers.store');
 
-    Route::delete('/favorites/farmers/{farmer}', [CustomerFavoriteController::class, 'destroyFarmer'])
-        ->name('customer.favorites.farmers.destroy');
+        Route::delete('/favorites/farmers/{farmer}', [CustomerFavoriteController::class, 'destroyFarmer'])
+            ->name('customer.favorites.farmers.destroy');
 
-    // Farmer discovery
-    Route::get('/farmers', [CustomerFarmerController::class, 'index'])
-        ->name('customer.farmers.index');
+        // Farmer discovery
+        Route::get('/farmers', [CustomerFarmerController::class, 'index'])
+            ->name('customer.farmers.index');
 
-    Route::get('/farmers/{farmer}', [CustomerFarmerController::class, 'show'])
-        ->name('customer.farmers.show');
+        Route::get('/farmers/{farmer}', [CustomerFarmerController::class, 'show'])
+            ->name('customer.farmers.show');
 
-    // Market discovery
-    Route::get('/markets', [CustomerMarketController::class, 'index'])
-        ->name('customer.markets.index');
+        // Market discovery
+        Route::get('/markets', [CustomerMarketController::class, 'index'])
+            ->name('customer.markets.index');
 
-    Route::get('/markets/{market}', [CustomerMarketController::class, 'show'])
-        ->name('customer.markets.show');
+        Route::get('/markets/{market}', [CustomerMarketController::class, 'show'])
+            ->name('customer.markets.show');
 
-    // Preferred markets
-    Route::post('/favorites/markets/{market}', [CustomerFavoriteController::class, 'storeMarket'])
-        ->name('customer.favorites.markets.store');
+        // Preferred markets
+        Route::post('/favorites/markets/{market}', [CustomerFavoriteController::class, 'storeMarket'])
+            ->name('customer.favorites.markets.store');
 
-    Route::delete('/favorites/markets/{market}', [CustomerFavoriteController::class, 'destroyMarket'])
-        ->name('customer.favorites.markets.destroy');
+        Route::delete('/favorites/markets/{market}', [CustomerFavoriteController::class, 'destroyMarket'])
+            ->name('customer.favorites.markets.destroy');
 
-    // Customer notifications
-    Route::get('/notifications', [CustomerNotificationController::class, 'index'])
-        ->name('customer.notifications.index');
+        // Notifications
+        Route::get('/notifications', [CustomerNotificationController::class, 'index'])
+            ->name('customer.notifications.index');
 
-    Route::patch('/notifications/{id}/read', [CustomerNotificationController::class, 'markAsRead'])
-        ->name('customer.notifications.read');
+        Route::patch('/notifications/{id}/read', [CustomerNotificationController::class, 'markAsRead'])
+            ->name('customer.notifications.read');
 
-    Route::patch('/notifications/read-all', [CustomerNotificationController::class, 'markAllAsRead'])
-        ->name('customer.notifications.readAll');
+        Route::patch('/notifications/read-all', [CustomerNotificationController::class, 'markAllAsRead'])
+            ->name('customer.notifications.readAll');
 
-    // Customer Orders
-    Route::get('/orders', [App\Http\Controllers\Customer\OrderController::class, 'index'])->name('customer.orders.index');
-    Route::get('/orders/create', [App\Http\Controllers\Customer\OrderController::class, 'create'])->name('customer.orders.create');
-    Route::post('/orders', [App\Http\Controllers\Customer\OrderController::class, 'store'])->name('customer.orders.store');
-    Route::get('/orders/{order}', [App\Http\Controllers\Customer\OrderController::class, 'show'])->name('customer.orders.show');
-    Route::patch('/orders/{order}/cancel', [App\Http\Controllers\Customer\OrderController::class, 'cancel'])->name('customer.orders.cancel');
+        // Orders
+        Route::get('/orders', [CustomerOrderController::class, 'index'])
+            ->name('customer.orders.index');
 
-    // Customer Reviews
-    Route::post('/reviews', [App\Http\Controllers\Customer\ReviewController::class, 'store'])->name('customer.reviews.store');
-});
+        Route::get('/orders/create', [CustomerOrderController::class, 'create'])
+            ->name('customer.orders.create');
+
+        Route::post('/orders', [CustomerOrderController::class, 'store'])
+            ->name('customer.orders.store');
+
+        Route::get('/orders/{order}', [CustomerOrderController::class, 'show'])
+            ->name('customer.orders.show');
+
+        Route::patch('/orders/{order}/cancel', [CustomerOrderController::class, 'cancel'])
+            ->name('customer.orders.cancel');
+
+        // Reviews
+        Route::post('/reviews', [CustomerReviewController::class, 'store'])
+            ->name('customer.reviews.store');
+    });
 
 // Static pages
 Route::view('/about', 'pages.about')->name('About');

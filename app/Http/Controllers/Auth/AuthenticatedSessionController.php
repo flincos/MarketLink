@@ -8,6 +8,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
+use App\Providers\RouteServiceProvider;
 
 class AuthenticatedSessionController extends Controller
 {
@@ -23,13 +24,21 @@ class AuthenticatedSessionController extends Controller
      * Handle an incoming authentication request.
      */
     public function store(LoginRequest $request): RedirectResponse
-    {
-        $request->authenticate();
+{
+    $request->authenticate();
 
-        $request->session()->regenerate();
+    $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+    if (! auth()->user()->is_active) {
+        auth()->logout();
+
+        return back()
+            ->withErrors(['email' => 'Your account has been deactivated. Please contact support.'])
+            ->onlyInput('email');
     }
+
+    return redirect()->intended(RouteServiceProvider::HOME);
+}
 
     /**
      * Destroy an authenticated session.

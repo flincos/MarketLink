@@ -18,11 +18,13 @@ class Product extends Model
         'stock_quantity',
         'is_available',
         'image',
+        'is_hidden',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
         'is_available' => 'boolean',
+        'is_hidden' => 'boolean',
     ];
 
     public function farmer(): BelongsTo
