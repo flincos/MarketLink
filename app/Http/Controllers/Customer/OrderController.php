@@ -267,32 +267,214 @@ class OrderController extends Controller
     /**
      * Show a single order's detail page.
      */
-    public function show(Order $order)
-    {
-        abort_if($order->customer_id !== auth()->id(), 403);
+    /**
+ * Show a single order's detail page.
+ */
+public function show(Order $order)
+{
+    abort_if($order->customer_id !== auth()->id(), 403);
 
-        $order->load([
+    $order->load([
+        'farmer',
+        'market',
+        'pickupSlot',
+        'items.product',
+    ]);
+
+    $productIds = $order->items
+        ->pluck('product_id')
+        ->filter()
+        ->unique();
+
+    $existingReviews = Review::where('customer_id', auth()->id())
+        ->whereIn('product_id', $productIds)
+        ->pluck('product_id')
+        ->flip();
+
+    $pickupSlots = PickupSlot::with('market')
+        ->where('farmer_profile_id', $order->farmer_profile_id)
+        ->where('date', '>=', today())
+        ->where(function ($query) use ($order) {
+            $query->where('is_available', true)
+                ->orWhere('id', $order->pickup_slot_id);
+        })
+        ->orderBy('date')
+        ->orderBy('start_time')
+        ->get();
+
+    return view(
+        'customer.orders.show',
+        compact('order', 'existingReviews', 'pickupSlots')
+    );
+}
+    /**
+ * Modify an existing order before the farmer's cutoff time.
+ */
+public function update(Request $request, Order $order)
+{
+    abort_if($order->customer_id !== auth()->id(), 403);
+
+    $validated = $request->validate([
+        'pickup_slot_id' => 'required|exists:pickup_slots,id',
+        'items' => 'required|array|min:1',
+        'items.*.quantity' => 'required|integer|min:0',
+        'notes' => 'nullable|string|max:500',
+    ]);
+
+    DB::transaction(function () use ($validated, $order) {
+        $lockedOrder = Order::query()
+            ->lockForUpdate()
+            ->findOrFail($order->id);
+
+        if ($lockedOrder->customer_id !== auth()->id()) {
+            abort(403);
+        }
+
+        if (! in_array($lockedOrder->status, ['placed', 'accepted'], true)) {
+            throw ValidationException::withMessages([
+                'order' => 'This order can no longer be modified.',
+            ]);
+        }
+
+        $lockedOrder->load([
+            'items' => fn ($query) => $query->orderBy('product_id'),
             'farmer',
-            'market',
-            'pickupSlot',
-            'items.product',
         ]);
 
-        $productIds = $order->items
-            ->pluck('product_id')
-            ->filter()
-            ->unique();
+        $pickupSlot = PickupSlot::query()
+            ->lockForUpdate()
+            ->findOrFail($validated['pickup_slot_id']);
 
-        $existingReviews = Review::where('customer_id', auth()->id())
-            ->whereIn('product_id', $productIds)
-            ->pluck('product_id')
-            ->flip();
+        if (! $pickupSlot->is_available) {
+            throw ValidationException::withMessages([
+                'pickup_slot_id' => 'This pickup slot is not available.',
+            ]);
+        }
 
-        return view(
-            'customer.orders.show',
-            compact('order', 'existingReviews')
-        );
-    }
+        if ($pickupSlot->date->isBefore(today())) {
+            throw ValidationException::withMessages([
+                'pickup_slot_id' => 'This pickup slot is no longer available.',
+            ]);
+        }
+
+        if ($pickupSlot->farmer_profile_id !== $lockedOrder->farmer_profile_id) {
+            throw ValidationException::withMessages([
+                'pickup_slot_id' => 'The selected pickup slot does not belong to this farmer.',
+            ]);
+        }
+
+        $marketBelongsToFarmer = $lockedOrder->farmer
+            ->markets()
+            ->whereKey($pickupSlot->market_id)
+            ->exists();
+
+        if (! $marketBelongsToFarmer) {
+            throw ValidationException::withMessages([
+                'pickup_slot_id' => 'The selected pickup market is not associated with this farmer.',
+            ]);
+        }
+
+        if (
+            $pickupSlot->date->isToday()
+            && $lockedOrder->farmer->order_cutoff_time
+            && now()->format('H:i:s') >= $lockedOrder->farmer->order_cutoff_time
+        ) {
+            throw ValidationException::withMessages([
+                'pickup_slot_id' => 'The farmer\'s order cutoff time has passed.',
+            ]);
+        }
+
+        $itemsByProduct = $lockedOrder->items->keyBy('product_id');
+
+        if ($itemsByProduct->isEmpty()) {
+            throw ValidationException::withMessages([
+                'items' => 'This order has no modifiable items.',
+            ]);
+        }
+
+        $totalAmount = 0;
+
+        foreach ($itemsByProduct as $productId => $item) {
+            $newQuantity = (int) ($validated['items'][$productId]['quantity'] ?? 0);
+
+            $product = Product::query()
+                ->lockForUpdate()
+                ->find($productId);
+
+            if (! $product) {
+                throw ValidationException::withMessages([
+                    'items' => 'One or more products in this order no longer exist.',
+                ]);
+            }
+
+            $oldQuantity = (int) $item->quantity;
+            $difference = $newQuantity - $oldQuantity;
+
+            if ($difference > 0 && $product->stock_quantity < $difference) {
+                throw ValidationException::withMessages([
+                    'items.' . $productId . '.quantity' =>
+                        'Not enough stock for ' . $product->name .
+                        '. Only ' . $product->stock_quantity .
+                        ' additional units are available.',
+                ]);
+            }
+
+            if ($newQuantity === 0) {
+                $item->delete();
+
+                if ($oldQuantity > 0) {
+                    $product->increment('stock_quantity', $oldQuantity);
+                }
+
+                continue;
+            }
+
+            if ($difference > 0) {
+                $product->decrement('stock_quantity', $difference);
+            } elseif ($difference < 0) {
+                $product->increment('stock_quantity', abs($difference));
+            }
+
+            $item->update([
+                'quantity' => $newQuantity,
+                'subtotal' => $item->price * $newQuantity,
+            ]);
+
+            $totalAmount += $item->price * $newQuantity;
+        }
+
+        if ($lockedOrder->items()->count() === 0) {
+            throw ValidationException::withMessages([
+                'items' => 'An order must contain at least one product.',
+            ]);
+        }
+
+        $activeOrders = Order::query()
+            ->where('pickup_slot_id', $pickupSlot->id)
+            ->where('id', '!=', $lockedOrder->id)
+            ->whereIn('status', ['placed', 'accepted', 'ready'])
+            ->count();
+
+        if ($activeOrders >= $pickupSlot->capacity) {
+            throw ValidationException::withMessages([
+                'pickup_slot_id' => 'This pickup slot is full.',
+            ]);
+        }
+
+        $lockedOrder->update([
+            'pickup_slot_id' => $pickupSlot->id,
+            'market_id' => $pickupSlot->market_id,
+            'pickup_date' => $pickupSlot->date,
+            'pickup_time' => $pickupSlot->start_time,
+            'total_amount' => $totalAmount,
+            'notes' => $validated['notes'] ?? $lockedOrder->notes,
+        ]);
+    });
+
+    return redirect()
+        ->route('customer.orders.show', $order)
+        ->with('success', 'Your order has been updated successfully.');
+}
 
     /**
      * Cancel an order that is still in placed status.

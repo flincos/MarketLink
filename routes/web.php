@@ -313,6 +313,9 @@ Route::delete('/cart', [CartController::class, 'clear'])
         Route::get('/orders/{order}', [CustomerOrderController::class, 'show'])
             ->name('customer.orders.show');
 
+            Route::patch('/orders/{order}', [CustomerOrderController::class, 'update'])
+    ->name('customer.orders.update');
+
         Route::patch('/orders/{order}/cancel', [CustomerOrderController::class, 'cancel'])
             ->name('customer.orders.cancel');
 
