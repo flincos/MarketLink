@@ -180,4 +180,28 @@ Route::middleware(['auth', 'role:customer'])->prefix('customer')->group(function
 Route::view('/about', 'pages.about')->name('About');
 Route::view('/contact', 'pages.contact')->name('Contact Us');
 
+Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+    // existing admin routes...
+
+    Route::resource('markets', AdminMarketController::class)->except(['show']);
+
+    Route::get('markets/map', [AdminMarketController::class, 'map'])->name('markets.map');
+}); 
+
+Route::middleware(['auth', 'role:customer'])
+    ->prefix('customer')
+    ->name('customer.')
+    ->group(function () {
+        // other customer routes...
+
+        Route::get('notifications', function () {
+            $notifications = auth()->user()
+                ->notifications()
+                ->orderByDesc('created_at')
+                ->paginate(20);
+
+            return view('customer.notifications.index', compact('notifications'));
+        })->name('notifications.index');
+    });
+
 require __DIR__.'/auth.php';

@@ -72,4 +72,21 @@ class MarketController extends Controller
 
         return back()->with('status', 'Market deleted.');
     }
+
+    public function map()
+{
+    $markets = \App\Models\Market::whereNotNull('latitude')
+        ->whereNotNull('longitude')
+        ->get(['id', 'name', 'address', 'latitude', 'longitude']);
+
+    $markers = $markets->map(function ($market) {
+        return [
+            'lat'   => (float) $market->latitude,
+            'lng'   => (float) $market->longitude,
+            'label' => $market->name . '<br>' . e($market->address),
+        ];
+    })->values()->toArray();
+
+    return view('admin.markets.map', compact('markers'));
+}
 }
