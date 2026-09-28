@@ -13,11 +13,11 @@ class ReviewController extends Controller
         $farmer = auth()->user()->farmerProfile;
 
         $reviews = Review::whereHas('product', function ($query) use ($farmer) {
-            $query->where('farmer_profile_id', $farmer->id);
-        })
-        ->with(['customer', 'product'])
-        ->latest()
-        ->get();
+                $query->where('farmer_profile_id', $farmer->id);
+            })
+            ->with(['user', 'product'])
+            ->latest()
+            ->get();
 
         return view('farmer.reviews.index', compact('reviews'));
     }

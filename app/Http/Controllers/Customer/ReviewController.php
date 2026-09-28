@@ -18,14 +18,14 @@ class ReviewController extends Controller
     {
         $validated = $request->validate([
             'product_id' => 'required|exists:products,id',
-            'rating' => 'required|integer|min:1|max:5',
-            'comment' => 'nullable|string|max:1000',
+            'rating'     => 'required|integer|min:1|max:5',
+            'comment'    => 'nullable|string|max:1000',
         ]);
 
-        $customerId = auth()->id();
+        $userId = auth()->id();
 
         // Ensure the customer has a completed order containing this product
-        $hasCompletedOrder = Order::where('customer_id', $customerId)
+        $hasCompletedOrder = Order::where('customer_id', $userId)
             ->where('status', 'completed')
             ->whereHas('items', function ($query) use ($validated) {
                 $query->where('product_id', $validated['product_id']);
@@ -39,7 +39,7 @@ class ReviewController extends Controller
         }
 
         // Prevent duplicate reviews
-        $alreadyReviewed = Review::where('customer_id', $customerId)
+        $alreadyReviewed = Review::where('user_id', $userId)
             ->where('product_id', $validated['product_id'])
             ->exists();
 
@@ -50,10 +50,10 @@ class ReviewController extends Controller
         }
 
         Review::create([
-            'customer_id' => $customerId,
+            'user_id'    => $userId,
             'product_id' => $validated['product_id'],
-            'rating' => $validated['rating'],
-            'comment' => $validated['comment'] ?? null,
+            'rating'     => $validated['rating'],
+            'comment'    => $validated['comment'] ?? null,
         ]);
 
         return back()->with('success', 'Your review has been submitted. Thank you!');

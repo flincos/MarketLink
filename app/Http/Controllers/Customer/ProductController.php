@@ -13,10 +13,12 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         $query = Product::with([
-            'farmer.user',
-            'farmer.markets',
-            'category',
-        ])->whereHas('farmer', function ($q) {
+        'farmer.user',
+        'farmer.markets',
+        'category',
+        ])
+        ->where('is_hidden', false)
+        ->whereHas('farmer', function ($q) {
             $q->where('status', 'approved');
         });
 
@@ -98,7 +100,9 @@ class ProductController extends Controller
     public function show(Product $product)
     {
         abort_unless(
-            $product->farmer && $product->farmer->status === 'approved',
+            $product->farmer &&
+            $product->farmer->status === 'approved' &&
+            ! $product->is_hidden,
             404
         );
 

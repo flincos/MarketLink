@@ -376,7 +376,7 @@ class OrderController extends Controller
             ->filter()
             ->unique();
 
-        $existingReviews = Review::where('customer_id', auth()->id())
+        $existingReviews = Review::where('user_id', auth()->id())
             ->whereIn('product_id', $productIds)
             ->pluck('product_id')
             ->flip();

@@ -23,7 +23,7 @@
                     <tr class="border-t">
                         <td class="px-4 py-2">{{ $product->name }}</td>
                         <td class="px-4 py-2">
-                            {{ optional(optional($product->farmerProfile)->user)->name ?? '-' }}
+                            {{ optional(optional($product->farmer)->user)->name ?? '-' }}
                         </td>
                         <td class="px-4 py-2">{{ $product->price }}</td>
                         <td class="px-4 py-2">

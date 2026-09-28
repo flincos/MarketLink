@@ -183,7 +183,7 @@
 
             </div>
 
-            {{-- Markets --}}
+                        {{-- Markets --}}
             @if ($product->farmer->markets->isNotEmpty())
                 <div class="mt-8 bg-white dark:bg-gray-800 rounded-lg shadow p-6">
 
@@ -195,21 +195,17 @@
 
                         @foreach ($product->farmer->markets as $market)
                             <div class="border rounded-lg p-4 dark:border-gray-700">
-
                                 <h3 class="font-semibold text-gray-900 dark:text-gray-100">
                                     {{ $market->name }}
                                 </h3>
-
                                 <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
                                     {{ $market->address }}
                                 </p>
-
                                 <a
                                     href="{{ route('customer.markets.show', $market->id) }}"
                                     class="inline-block mt-3 text-indigo-600 hover:underline">
                                     View Market
                                 </a>
-
                             </div>
                         @endforeach
 
@@ -217,6 +213,53 @@
 
                 </div>
             @endif
+
+            {{-- Customer Reviews --}}
+            <div class="mt-8 bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                    Customer Reviews
+                </h2>
+
+                @php
+                    $reviews = $product->reviews()
+                        ->where('is_hidden', false)
+                        ->latest()
+                        ->get();
+                @endphp
+
+                @if ($reviews->isEmpty())
+                    <p class="text-sm text-gray-600 dark:text-gray-300">
+                        There are no reviews for this product yet.
+                    </p>
+                @else
+                    <div class="space-y-4">
+                        @foreach ($reviews as $review)
+                            <div class="border-b border-gray-200 dark:border-gray-700 pb-3 last:border-b-0">
+                                <div class="flex items-center justify-between">
+                                    <span class="font-medium text-gray-900 dark:text-gray-100">
+                                        {{ $review->user->name ?? 'Customer' }}
+                                    </span>
+                                    <span class="text-sm text-yellow-500">
+                                        Rating: {{ $review->rating }}/5
+                                    </span>
+                                </div>
+
+                                @if ($review->comment)
+                                    <p class="mt-1 text-sm text-gray-700 dark:text-gray-200">
+                                        {{ $review->comment }}
+                                    </p>
+                                @endif
+
+                                @if ($review->farmer_response)
+                                    <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                                        Farmer response: {{ $review->farmer_response }}
+                                    </p>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
 
             {{-- Back to Products --}}
             <div class="mt-8">

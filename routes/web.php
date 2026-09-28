@@ -26,6 +26,8 @@ use App\Http\Controllers\FarmerProfileController;
 use App\Http\Controllers\ProfileController as UserProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Customer\CartController;
+use App\Http\Controllers\Admin\AnnouncementController;
+use App\Models\Announcement;
 
 // Home
 Route::get('/', function () {
@@ -127,6 +129,8 @@ Route::middleware(['auth', 'role:admin'])
 
         Route::get('/markets/map', [AdminMarketController::class, 'map'])
             ->name('markets.map');
+        //Announcements
+        Route::resource('announcements', AnnouncementController::class)->except(['show']);
     });
 
 // Farmer routes
@@ -325,11 +329,20 @@ Route::middleware(['auth', 'role:customer'])
         // Reviews
         Route::post('/reviews', [CustomerReviewController::class, 'store'])
             ->name('customer.reviews.store');
+        
+        Route::get('/announcements', function () {
+        $announcements = \App\Models\Announcement::published()
+            ->orderByDesc('published_at')
+            ->paginate(10);
+
+        return view('customer.announcements.index', compact('announcements'));
+    })->name('announcements.index');    
     });
 
-// Static pages
-Route::view('/about', 'pages.about')->name('About');
+    // Static pages
+    Route::view('/about', 'pages.about')->name('About');
 
-Route::view('/contact', 'pages.contact')->name('Contact Us');
-
+    Route::view('/contact', 'pages.contact')->name('Contact Us');
+    
+    
 require __DIR__.'/auth.php';

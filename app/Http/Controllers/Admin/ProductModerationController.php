@@ -11,7 +11,7 @@ class ProductModerationController extends Controller
 {
     public function index()
     {
-        $products = Product::with('farmerProfile.user')
+        $products = Product::with('farmer.user')
             ->orderByDesc('created_at')
             ->paginate(20);
 
