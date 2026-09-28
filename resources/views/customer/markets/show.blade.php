@@ -43,7 +43,68 @@
                 <p class="mt-3 text-gray-600 dark:text-gray-300">
                     {{ $market->address }}
                 </p>
+                @if($market->formattedOperatingDays())
+                    <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                        <span class="font-semibold">Operating Days:</span> {{ $market->formattedOperatingDays() }}
+                    </p>
+                @endif
 
+                @if($market->formattedOpeningTime() && $market->formattedClosingTime())
+                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                        <span class="font-semibold">Timings:</span> {{ $market->formattedOpeningTime() }} – {{ $market->formattedClosingTime() }}
+                    </p>
+                @endif
+
+                @if($market->latitude && $market->longitude)
+                    <div class="mt-4 space-y-2">
+                        {{-- Leaflet map with a single marker --}}
+                        <x-map
+                            id="market-map-{{ $market->id }}"
+                            :height="'300px'"
+                            :markers="[
+                                [
+                                    'lat' => $market->latitude,
+                                    'lng' => $market->longitude,
+                                    'label' => $market->name,
+                                ],
+                            ]"
+                        />
+
+                        {{-- External map link (OpenStreetMap) --}}
+                        <a
+                            href="https://www.openstreetmap.org/?mlat={{ $market->latitude }}&mlon={{ $market->longitude }}#map=16/{{ $market->latitude }}/{{ $market->longitude }}"
+                            target="_blank"
+                            rel="noopener"
+                            class="inline-block text-indigo-600 dark:text-indigo-400 hover:underline text-sm"
+                        >
+                            Open in Map
+                        </a>
+                    </div>
+                @endif
+                @if($market->formattedOperatingDays())
+                    <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                        <span class="font-semibold">Operating Days:</span> {{ $market->formattedOperatingDays() }}
+                    </p>
+                @endif
+
+                @if($market->formattedOpeningTime() && $market->formattedClosingTime())
+                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                        <span class="font-semibold">Timings:</span> {{ $market->formattedOpeningTime() }} – {{ $market->formattedClosingTime() }}
+                    </p>
+                @endif
+
+                @if($market->latitude && $market->longitude)
+                    <p class="mt-3">
+                        <a
+                            href="https://www.openstreetmap.org/?mlat={{ $market->latitude }}&mlon={{ $market->longitude }}#map=16/{{ $market->latitude }}/{{ $market->longitude }}"
+                            target="_blank"
+                            rel="noopener"
+                            class="text-indigo-600 dark:text-indigo-400 hover:underline text-sm"
+                        >
+                            Open in Map
+                        </a>
+                    </p>
+                @endif
                 @if ($market->description)
                     <p class="mt-4 text-gray-700 dark:text-gray-300">
                         {{ $market->description }}
@@ -78,6 +139,17 @@
                             @if ($farmer->address)
                                 <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
                                     {{ $farmer->address }}
+                                </p>
+                            @endif
+                            @if($market->formattedOperatingDays())
+                                <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                                    <span class="font-semibold">Operating Days:</span> {{ $market->formattedOperatingDays() }}
+                                </p>
+                            @endif
+
+                            @if($market->formattedOpeningTime() && $market->formattedClosingTime())
+                                <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                                    <span class="font-semibold">Timings:</span> {{ $market->formattedOpeningTime() }} – {{ $market->formattedClosingTime() }}
                                 </p>
                             @endif
 

@@ -30,11 +30,17 @@ class MarketController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'name'        => 'required|string|max:255',
-            'address'     => 'required|string',
-            'description' => 'nullable|string',
-            'latitude'    => 'nullable|numeric',
-            'longitude'   => 'nullable|numeric',
+            'name' => ['required', 'string', 'max:255'],
+            'address' => ['required', 'string'],
+            'description' => ['nullable', 'string'],
+
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+
+            'operating_days' => ['nullable', 'array'],
+            'operating_days.*' => ['in:mon,tue,wed,thu,fri,sat,sun'],
+            'opening_time' => ['nullable', 'date_format:H:i'],
+            'closing_time' => ['nullable', 'date_format:H:i', 'after:opening_time'],
         ]);
 
         Market::create($validated);
@@ -59,11 +65,21 @@ class MarketController extends Controller
             'longitude'   => 'nullable|numeric',
         ]);
 
+        Market::create($validated);
+        // ...
         $market->update($validated);
 
         return redirect()
             ->route('admin.markets.index')
             ->with('status', 'Market updated.');
+        $data = $request->all();
+
+        $data['operating_days'] = $request->filled('operating_days')
+            ? array_values($request->input('operating_days'))
+            : null;
+
+        $data['opening_time'] = $request->input('opening_time') ?: null;
+        $data['closing_time'] = $request->input('closing_time') ?: null;    
     }
 
     public function destroy(Market $market): RedirectResponse

@@ -10,28 +10,51 @@
 
             {{-- Search --}}
             <form method="GET"
-                  action="{{ route('customer.markets.index') }}"
-                  class="mb-6 flex flex-col sm:flex-row gap-3">
+                action="{{ route('customer.markets.index') }}"
+                class="mb-6 flex flex-col sm:flex-row flex-wrap gap-3">
 
+                {{-- Search input --}}
                 <input
                     type="text"
                     name="search"
                     value="{{ request('search') }}"
                     placeholder="Search markets by name or address..."
-                    class="w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                    class="w-full sm:flex-1 rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
                 >
 
-                <button
-                    type="submit"
-                    class="px-5 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
-                    Search
-                </button>
+                {{-- Market Day filter --}}
+                <div class="w-full sm:w-64">
+                    <label for="day" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Market Day
+                    </label>
+                    <select
+                        name="day"
+                        id="day"
+                        class="w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                    >
+                        <option value="">All days</option>
+                        @foreach($weekdayOptions as $code => $label)
+                            <option value="{{ $code }}" {{ ($selectedDay ?? '') === $code ? 'selected' : '' }}>
+                                {{ $label }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
 
-                <a
-                    href="{{ route('customer.markets.index') }}"
-                    class="px-5 py-2 border rounded-md text-center">
-                    Reset
-                </a>
+                {{-- Buttons --}}
+                <div class="flex gap-3">
+                    <button
+                        type="submit"
+                        class="px-5 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
+                        Apply
+                    </button>
+
+                    <a
+                        href="{{ route('customer.markets.index') }}"
+                        class="px-5 py-2 border rounded-md text-center">
+                        Reset
+                    </a>
+                </div>
             </form>
 
             {{-- Market Listing --}}
@@ -48,6 +71,19 @@
                             <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
                                 {{ $market->address }}
                             </p>
+
+                            {{-- Operating days & timings --}}
+                            @if($market->formattedOperatingDays())
+                                <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                                    <span class="font-semibold">Days:</span> {{ $market->formattedOperatingDays() }}
+                                </p>
+                            @endif
+
+                            @if($market->formattedOpeningTime() && $market->formattedClosingTime())
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                    {{ $market->formattedOpeningTime() }} – {{ $market->formattedClosingTime() }}
+                                </p>
+                            @endif
 
                             <p class="mt-3 text-sm text-gray-600 dark:text-gray-300">
                                 {{ $market->farmers->count() }}

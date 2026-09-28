@@ -32,7 +32,63 @@
                     <p class="text-sm text-red-600 mt-1">{{ $message }}</p>
                 @enderror
             </div>
+            <div class="mb-3">
+                <label class="form-label">Operating Days</label>
+                @php
+                    $weekdayOptions = \App\Models\Market::weekdayOptions();
+                    $selectedDays = old('operating_days', isset($market) && $market->operating_days ? $market->operating_days : []);
+                @endphp
+                <div class="d-flex flex-wrap gap-3">
+                    @foreach ($weekdayOptions as $code => $label)
+                        <div class="form-check me-3">
+                            <input
+                                class="form-check-input"
+                                type="checkbox"
+                                name="operating_days[]"
+                                id="operating_day_{{ $code }}"
+                                value="{{ $code }}"
+                                {{ in_array($code, $selectedDays ?? []) ? 'checked' : '' }}
+                            >
+                            <label class="form-check-label" for="operating_day_{{ $code }}">
+                                {{ $label }}
+                            </label>
+                        </div>
+                    @endforeach
+                </div>
+                @error('operating_days')
+                    <div class="text-danger small">{{ $message }}</div>
+                @enderror
+            </div>
 
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="opening_time" class="form-label">Opening Time</label>
+                    <input
+                        type="time"
+                        name="opening_time"
+                        id="opening_time"
+                        class="form-control @error('opening_time') is-invalid @enderror"
+                        value="{{ old('opening_time', isset($market) && $market->opening_time ? $market->opening_time->format('H:i') : '') }}"
+                    >
+                    @error('opening_time')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="closing_time" class="form-label">Closing Time</label>
+                    <input
+                        type="time"
+                        name="closing_time"
+                        id="closing_time"
+                        class="form-control @error('closing_time') is-invalid @enderror"
+                        value="{{ old('closing_time', isset($market) && $market->closing_time ? $market->closing_time->format('H:i') : '') }}"
+                    >
+                    @error('closing_time')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
+            </div>                
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Latitude</label>

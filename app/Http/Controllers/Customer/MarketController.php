@@ -19,6 +19,7 @@ class MarketController extends Controller
             },
         ]);
 
+        // Search by name/address
         if ($request->filled('search')) {
             $search = $request->search;
 
@@ -26,6 +27,14 @@ class MarketController extends Controller
                 $query->where('name', 'like', '%'.$search.'%')
                     ->orWhere('address', 'like', '%'.$search.'%');
             });
+        }
+
+        // Filter by operating day
+        $weekdayOptions = Market::weekdayOptions();
+        $selectedDay = $request->input('day');
+
+        if ($selectedDay && array_key_exists($selectedDay, $weekdayOptions)) {
+            $query->whereJsonContains('operating_days', $selectedDay);
         }
 
         $markets = $query
@@ -41,7 +50,9 @@ class MarketController extends Controller
 
         return view('customer.markets.index', compact(
             'markets',
-            'favoriteMarketIds'
+            'favoriteMarketIds',
+            'weekdayOptions',
+            'selectedDay'
         ));
     }
 
