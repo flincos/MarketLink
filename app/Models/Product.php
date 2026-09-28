@@ -51,4 +51,52 @@ class Product extends Model
     {
         return $this->hasMany(OrderItem::class);
     }
+    protected static function booted()
+    {
+    static::updated(function (Product $product) {
+        // Determine previous "availability" and current "availability"
+        $wasAvailable = self::availabilityFlag($product->getOriginal());
+        $isAvailable  = self::availabilityFlag($product->getAttributes());
+
+        if (! $wasAvailable && $isAvailable) {
+            $product->notifyFavoritesOfRestock();
+        }
+
+        if ($wasAvailable && ! $isAvailable) {
+        $product->favorites()->update(['restock_notified_at' => null]);
+        }
+    });
+    }
+    protected static function availabilityFlag(array $attributes): bool
+    {
+        $available = $attributes['is_available'] ?? false;
+        $stock     = $attributes['stock_quantity'] ?? 0;
+
+        return (bool) $available && (int) $stock > 0;
+    }
+
+    public function notifyFavoritesOfRestock(): void
+    {
+        // Get favorites where this product is favorited and not yet notified for this restock
+        $favorites = $this->favorites()
+            ->whereNull('restock_notified_at')
+            ->get();
+
+        if ($favorites->isEmpty()) {
+            return;
+        }
+
+        foreach ($favorites as $favorite) {
+            $user = $favorite->user;
+            if (! $user) {
+                continue;
+            }
+
+            $user->notify(new \App\Notifications\ProductRestocked($this));
+
+            // Mark as notified
+            $favorite->restock_notified_at = now();
+            $favorite->save();
+        }
+    }
 }
