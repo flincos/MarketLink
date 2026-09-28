@@ -92,19 +92,6 @@
                         <span class="font-semibold">Timings:</span> {{ $market->formattedOpeningTime() }} – {{ $market->formattedClosingTime() }}
                     </p>
                 @endif
-
-                @if($market->latitude && $market->longitude)
-                    <p class="mt-3">
-                        <a
-                            href="https://www.openstreetmap.org/?mlat={{ $market->latitude }}&mlon={{ $market->longitude }}#map=16/{{ $market->latitude }}/{{ $market->longitude }}"
-                            target="_blank"
-                            rel="noopener"
-                            class="text-indigo-600 dark:text-indigo-400 hover:underline text-sm"
-                        >
-                            Open in Map
-                        </a>
-                    </p>
-                @endif
                 @if ($market->description)
                     <p class="mt-4 text-gray-700 dark:text-gray-300">
                         {{ $market->description }}
