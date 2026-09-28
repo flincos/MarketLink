@@ -92,11 +92,24 @@
                                             ₱{{ number_format((float) $order->total_amount, 2) }}
                                         </td>
                                         <td class="px-4 py-3">
-                                            <a href="{{ route('customer.orders.show', $order->id) }}"
-                                               class="px-3 py-1 text-sm bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
-                                                View
-                                            </a>
-                                        </td>
+    <a href="{{ route('customer.orders.show', $order->id) }}"
+       class="px-3 py-1 text-sm bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
+        View
+    </a>
+
+    @if ($order->status === 'completed')
+        <form method="POST"
+              action="{{ route('customer.orders.reorder', $order->id) }}"
+              class="inline">
+            @csrf
+
+            <button type="submit"
+                    class="ml-2 px-3 py-1 text-sm bg-green-600 text-white rounded-md hover:bg-green-700">
+                Reorder
+            </button>
+        </form>
+    @endif
+</td>
                                     </tr>
                                 @endforeach
                             </tbody>

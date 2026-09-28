@@ -316,6 +316,9 @@ Route::delete('/cart', [CartController::class, 'clear'])
             Route::patch('/orders/{order}', [CustomerOrderController::class, 'update'])
     ->name('customer.orders.update');
 
+    Route::post('/orders/{order}/reorder', [CustomerOrderController::class, 'reorder'])
+    ->name('customer.orders.reorder');
+
         Route::patch('/orders/{order}/cancel', [CustomerOrderController::class, 'cancel'])
             ->name('customer.orders.cancel');
 
