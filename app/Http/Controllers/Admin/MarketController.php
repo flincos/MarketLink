@@ -64,9 +64,6 @@ class MarketController extends Controller
             'latitude'    => 'nullable|numeric',
             'longitude'   => 'nullable|numeric',
         ]);
-
-        Market::create($validated);
-        // ...
         $market->update($validated);
 
         return redirect()
