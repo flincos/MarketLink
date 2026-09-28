@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Farmer;
 
 use App\Http\Controllers\Controller;
 use App\Models\Review;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -27,6 +28,21 @@ class DashboardController extends Controller
             ->latest()
             ->take(5)
             ->get();
+        // Best-selling products (completed orders only)
+        $topProducts = $farmer->orders()
+            ->where('status', 'completed')
+            ->join('order_items', 'orders.id', '=', 'order_items.order_id')
+            ->join('products', 'order_items.product_id', '=', 'products.id')
+            ->select(
+                'products.id',
+                'products.name',
+                DB::raw('SUM(order_items.quantity) as total_units_sold'),
+                DB::raw('SUM(order_items.subtotal) as total_revenue')
+            )
+            ->groupBy('products.id', 'products.name')
+            ->orderByDesc('total_units_sold')
+            ->limit(5)
+            ->get();    
 
         return view('farmer.dashboard', compact(
             'farmer',
@@ -38,6 +54,7 @@ class DashboardController extends Controller
             'pendingOrders',
             'revenue',
             'recentOrders',
+            'topProducts',
         ));
     }
 }
