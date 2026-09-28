@@ -28,6 +28,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Customer\CartController;
 use App\Http\Controllers\Admin\AnnouncementController;
 use App\Models\Announcement;
+use App\Http\Controllers\Farmer\WeeklyStockTemplateController;
 
 // Home
 Route::get('/', function () {
@@ -223,7 +224,15 @@ Route::middleware(['auth', 'role:farmer'])
             Route::delete('/products/{product}', [ProductController::class, 'destroy'])
                 ->name('farmer.products.destroy');
         });
-    });
+        Route::get('/weekly-stock-templates', [WeeklyStockTemplateController::class, 'index'])
+            ->name('farmer.weekly-stock-templates.index');
+
+        Route::post('/weekly-stock-templates', [WeeklyStockTemplateController::class, 'store'])
+            ->name('farmer.weekly-stock-templates.store');
+
+        Route::delete('/weekly-stock-templates/{weeklyStockTemplate}', [WeeklyStockTemplateController::class, 'destroy'])
+            ->name('farmer.weekly-stock-templates.destroy');
+});
 
 // Customer routes
 Route::middleware(['auth', 'role:customer'])
