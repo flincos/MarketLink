@@ -1,5 +1,16 @@
-d-800 rounded-lg">
-                    <ul class="list-disc list-inside space-y-1 text-sm">
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
+            Checkout
+        </h2>
+    </x-slot>
+
+    <div class="py-8">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+
+            @if ($errors->any())
+                <div class="mb-4 p-3 rounded bg-red-100 text-red-800 text-sm">
+                    <ul class="list-disc list-inside space-y-1">
                         @foreach ($errors->all() as $error)
                             <li>{{ $error }}</li>
                         @endforeach
@@ -7,77 +18,66 @@ d-800 rounded-lg">
                 </div>
             @endif
 
-            {{-- Product Details Card --}}
+            {{-- Cart summary --}}
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Product Details</h3>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                    Order Summary
+                </h3>
 
-                <div class="flex gap-6">
-                    @if ($product->image)
-                        <img src="{{ asset('storage/' . $product->image) }}"
-                             alt="{{ $product->name }}"
-                             class="w-28 h-28 object-cover rounded-lg flex-shrink-0">
-                    @else
-                        <div class="w-28 h-28 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <span class="text-xs text-gray-400">No image</span>
+                @php
+                    $total = 0;
+                @endphp
+
+                <div class="space-y-4">
+                    @foreach ($cart as $productId => $quantity)
+                        @php
+                            $product = $products[$productId] ?? null;
+                            if (! $product) continue;
+                            $subtotal = $product->price * $quantity;
+                            $total += $subtotal;
+                        @endphp
+
+                        <div class="flex items-start justify-between border-b border-gray-200 dark:border-gray-700 pb-4 last:border-b-0">
+                            <div>
+                                <h4 class="font-semibold text-gray-900 dark:text-gray-100">
+                                    {{ $product->name }}
+                                </h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-300">
+                                    ₱{{ number_format((float) $product->price, 2) }} / {{ $product->unit }}
+                                </p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    Quantity: {{ $quantity }}
+                                </p>
+                            </div>
+
+                            <div class="text-right">
+                                <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                    ₱{{ number_format((float) $subtotal, 2) }}
+                                </p>
+                            </div>
                         </div>
-                    @endif
+                    @endforeach
+                </div>
 
-                    <div>
-                        <h4 class="text-xl font-bold text-gray-900 dark:text-gray-100">
-                            {{ $product->name }}
-                        </h4>
+                <div class="mt-4 flex justify-between items-center">
+                    <p class="text-sm text-gray-600 dark:text-gray-300">
+                        Farmer: <span class="font-medium">{{ $farmer->stall_name }}</span>
+                    </p>
 
-                        <p class="mt-1 text-2xl font-bold text-indigo-600">
-                            ₱{{ number_format((float) $product->price, 2) }}
-                            <span class="text-base font-normal text-gray-500 dark:text-gray-400">
-                                / {{ $product->unit }}
-                            </span>
-                        </p>
-
-                        <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
-                            Stock available: <span class="font-medium">{{ $product->stock_quantity }}</span>
-                        </p>
-
-                        <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-                            Farmer: <span class="font-medium">{{ $product->farmer?->stall_name }}</span>
-                        </p>
-                    </div>
+                    <p class="text-lg font-bold text-gray-900 dark:text-gray-100">
+                        Total: ₱{{ number_format((float) $total, 2) }}
+                    </p>
                 </div>
             </div>
 
-            {{-- Order Form --}}
+            {{-- Checkout form --}}
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-6">Order Details</h3>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                    Pickup Details
+                </h3>
 
                 <form method="POST" action="{{ route('customer.orders.store') }}">
                     @csrf
-
-                    {{-- Hidden product ID --}}
-                    <input type="hidden" name="product_id" value="{{ $product->id }}">
-
-                    {{-- Quantity --}}
-                    <div class="mb-5">
-                        <label for="quantity"
-                               class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Quantity <span class="text-red-500">*</span>
-                        </label>
-                        <input
-                            type="number"
-                            id="quantity"
-                            name="quantity"
-                            value="{{ old('quantity', 1) }}"
-                            min="1"
-                            max="{{ $product->stock_quantity }}"
-                            required
-                            class="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm dark:bg-gray-700 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 @error('quantity') border-red-500 @enderror"
-                        >
-                        @error('quantity')
-                            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                        @enderror
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                            Maximum available: {{ $product->stock_quantity }}
-                        </p>
-                    </div>
 
                     {{-- Pickup Slot --}}
                     <div class="mb-5">
@@ -147,9 +147,9 @@ d-800 rounded-lg">
                             </button>
                         @endif
 
-                        <a href="{{ route('customer.products.show', $product->id) }}"
+                        <a href="{{ route('customer.cart.index') }}"
                            class="text-gray-600 dark:text-gray-300 hover:underline text-sm">
-                            Cancel
+                            Back to Cart
                         </a>
                     </div>
                 </form>
@@ -158,6 +158,3 @@ d-800 rounded-lg">
         </div>
     </div>
 </x-app-layout>
-
-C:\laragon\www\MarketLink(feature/phase5-customer-discovery)
-λ

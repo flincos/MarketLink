@@ -285,20 +285,20 @@ Route::middleware(['auth', 'role:customer'])
             ->name('customer.notifications.readAll');
         
         // Cart
-Route::get('/cart', [CartController::class, 'index'])
-    ->name('customer.cart.index');
+        Route::get('/cart', [CartController::class, 'index'])
+            ->name('customer.cart.index');
 
-Route::post('/cart', [CartController::class, 'store'])
-    ->name('customer.cart.store');
+        Route::post('/cart', [CartController::class, 'store'])
+            ->name('customer.cart.store');
 
-Route::patch('/cart/{product}', [CartController::class, 'update'])
-    ->name('customer.cart.update');
+        Route::patch('/cart/{product}', [CartController::class, 'update'])
+            ->name('customer.cart.update');
 
-Route::delete('/cart/{product}', [CartController::class, 'destroy'])
-    ->name('customer.cart.destroy');
+        Route::delete('/cart/{product}', [CartController::class, 'destroy'])
+            ->name('customer.cart.destroy');
 
-Route::delete('/cart', [CartController::class, 'clear'])
-    ->name('customer.cart.clear');
+        Route::delete('/cart', [CartController::class, 'clear'])
+            ->name('customer.cart.clear');
 
         // Orders
         Route::get('/orders', [CustomerOrderController::class, 'index'])

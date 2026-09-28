@@ -5,6 +5,16 @@
         </h2>
     </x-slot>
 
+    @if ($errors->any())
+    <div class="mb-4 p-3 rounded bg-red-100 text-red-800 text-sm">
+        <ul class="list-disc list-inside space-y-1">
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+    @endif
+
     <div class="py-8">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
@@ -108,13 +118,32 @@
                             @endif
                         </div>
 
-                        {{-- Order Now Button --}}
+                        {{-- Add to Cart --}}
                         @if ($product->is_available && $product->stock_quantity > 0)
                             <div class="mt-4">
-                                <a href="{{ route('customer.orders.create', ['product_id' => $product->id]) }}"
-                                   class="inline-block px-6 py-2 bg-green-600 text-white font-medium rounded-md hover:bg-green-700">
-                                    Order Now
-                                </a>
+                                <form method="POST" action="{{ route('customer.cart.store') }}" class="flex items-center gap-3">
+                                    @csrf
+                                    <input type="hidden" name="product_id" value="{{ $product->id }}">
+
+                                    <label class="text-sm text-gray-700 dark:text-gray-300">
+                                        Quantity:
+                                        <input
+                                            type="number"
+                                            name="quantity"
+                                            value="1"
+                                            min="1"
+                                            max="{{ $product->stock_quantity }}"
+                                            class="w-20 ml-1 border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 text-sm dark:bg-gray-700 dark:text-gray-100"
+                                            required
+                                        >
+                                    </label>
+
+                                    <button
+                                        type="submit"
+                                        class="px-6 py-2 bg-green-600 text-white font-medium rounded-md hover:bg-green-700">
+                                        Add to Cart
+                                    </button>
+                                </form>
                             </div>
                         @endif
 

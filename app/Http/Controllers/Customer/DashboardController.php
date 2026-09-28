@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Customer;
 use App\Http\Controllers\Controller;
 use App\Models\Favorite;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 
 class DashboardController extends Controller
 {
@@ -13,36 +14,25 @@ class DashboardController extends Controller
      */
     public function index(Request $request)
     {
-        $user = $request->user();
+        $user = auth()->user();
 
-        // Retrieve the customer's favorite products.
-        $productFavorites = Favorite::where('user_id', $user->id)
-            ->whereNotNull('product_id')
-            ->with([
-                'product.farmer',
-                'product.category',
-            ])
-            ->latest()
-            ->take(4)
-            ->get();
+    $productFavorites = Favorite::where('user_id', $user->id)
+        ->whereNotNull('product_id')
+        ->with('product')
+        ->latest()
+        ->take(4)
+        ->get();
 
-        // Retrieve the customer's preferred markets.
-        $marketFavorites = Favorite::where('user_id', $user->id)
-            ->whereNotNull('market_id')
-            ->with('market')
-            ->latest()
-            ->take(4)
-            ->get();
+    $marketFavorites = collect(); // or new Collection();
 
-        // Count unread notifications.
-        $unreadNotificationsCount = $user
-            ->unreadNotifications()
-            ->count();
+    $unreadNotificationsCount = $user
+        ? $user->unreadNotifications()->count()
+        : 0;
 
-        return view('customer.dashboard', compact(
-            'productFavorites',
-            'marketFavorites',
-            'unreadNotificationsCount'
-        ));
+    return view('customer.dashboard', compact(
+        'productFavorites',
+        'marketFavorites',
+        'unreadNotificationsCount'
+    ));
     }
 }
