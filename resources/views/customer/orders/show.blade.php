@@ -153,6 +153,93 @@
                 </div>
             </div>
 
+            {{-- Modify Order (only for placed/accepted) --}}
+            @if (in_array($order->status, ['placed', 'accepted']))
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
+                    <h4 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
+                        Modify Order
+                    </h4>
+
+                    <form method="POST" action="{{ route('customer.orders.update', $order) }}">
+                        @csrf
+                        @method('PATCH')
+
+                        {{-- Pickup Slot --}}
+                        <div class="mb-4">
+                            <label for="pickup_slot_id"
+                                   class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                Pickup Slot <span class="text-red-500">*</span>
+                            </label>
+
+                            @if ($pickupSlots->isEmpty())
+                                <p class="text-sm text-red-600">
+                                    No pickup slots are currently available for this farmer.
+                                    You can still adjust quantities, but pickup details cannot be changed.
+                                </p>
+                            @else
+                                <select id="pickup_slot_id" name="pickup_slot_id" required
+                                        class="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm dark:bg-gray-700 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                                    @foreach ($pickupSlots as $slot)
+                                        <option value="{{ $slot->id }}"
+                                            {{ $order->pickup_slot_id == $slot->id ? 'selected' : '' }}>
+                                            {{ $slot->date->format('D, M d, Y') }}
+                                            · {{ \Carbon\Carbon::parse($slot->start_time)->format('g:i A') }}
+                                            – {{ \Carbon\Carbon::parse($slot->end_time)->format('g:i A') }}
+                                            @if ($slot->market)
+                                                · {{ $slot->market->name }}
+                                            @endif
+                                        </option>
+                                    @endforeach
+                                </select>
+                            @endif
+                        </div>
+
+                        {{-- Modify quantities --}}
+                        <div class="mb-4">
+                            <h5 class="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                                Update Quantities
+                            </h5>
+
+                            <div class="space-y-2">
+                                @foreach ($order->items as $item)
+                                    @if ($item->product_id)
+                                        <div class="flex items-center justify-between gap-2">
+                                            <span class="text-sm text-gray-900 dark:text-gray-100">
+                                                {{ $item->product_name }}
+                                            </span>
+                                            <input type="number"
+                                                   name="items[{{ $item->product_id }}][quantity]"
+                                                   value="{{ $item->quantity }}"
+                                                   min="0"
+                                                   class="w-20 border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 text-sm dark:bg-gray-700 dark:text-gray-100">
+                                        </div>
+                                    @endif
+                                @endforeach
+                            </div>
+
+                            <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                                Set quantity to 0 to remove a product from the order.
+                            </p>
+                        </div>
+
+                        {{-- Notes --}}
+                        <div class="mb-4">
+                            <label for="notes"
+                                   class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                Notes <span class="text-gray-400">(optional)</span>
+                            </label>
+                            <textarea id="notes" name="notes" rows="3" maxlength="500"
+                                      class="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm dark:bg-gray-700 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500">{{ old('notes', $order->notes) }}</textarea>
+                        </div>
+
+                        <button type="submit"
+                                class="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm hover:bg-indigo-700">
+                            Save Changes
+                        </button>
+                    </form>
+                </div>
+            @endif
+
             {{-- Cancel Button --}}
             @if ($order->status === 'placed')
                 <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
