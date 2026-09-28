@@ -10,6 +10,31 @@
 
             {{-- Market Information --}}
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
+                @php
+                    $user = auth()->user();
+                    $isPreferred = $user && $user->preferred_market_id === $market->id;
+                @endphp
+
+                <div class="mt-4">
+                    @if ($isPreferred)
+                        <form method="POST" action="{{ route('customer.markets.preferred.clear') }}">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit"
+                                    class="px-4 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700">
+                                Remove Preferred Market
+                            </button>
+                        </form>
+                    @else
+                        <form method="POST" action="{{ route('customer.markets.preferred.set', $market) }}">
+                            @csrf
+                            <button type="submit"
+                                    class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700">
+                                Set as Preferred Market
+                            </button>
+                        </form>
+                    @endif
+                </div>
 
                 <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
                     {{ $market->name }}

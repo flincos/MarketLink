@@ -59,4 +59,22 @@ class MarketController extends Controller
 
         return view('customer.markets.show', compact('market'));
     }
+
+    public function setPreferred(Market $market, Request $request)
+    {
+        $user = $request->user();
+        $user->preferred_market_id = $market->id;
+        $user->save();
+
+        return back()->with('success', 'Preferred market updated.');
+    }
+
+    public function clearPreferred(Request $request)
+    {
+        $user = $request->user();
+        $user->preferred_market_id = null;
+        $user->save();
+
+        return back()->with('success', 'Preferred market cleared.');
+    }
 }

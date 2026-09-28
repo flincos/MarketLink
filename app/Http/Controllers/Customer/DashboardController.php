@@ -29,10 +29,13 @@ class DashboardController extends Controller
         ? $user->unreadNotifications()->count()
         : 0;
 
+    $preferredMarket = $user?->preferredMarket ?? null;
+
     return view('customer.dashboard', compact(
         'productFavorites',
         'marketFavorites',
-        'unreadNotificationsCount'
+        'unreadNotificationsCount',
+        'preferredMarket'
     ));
     }
 }

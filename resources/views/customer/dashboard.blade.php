@@ -184,7 +184,14 @@
                         View All Favorites
                     </a>
                 </div>
-
+                @if(isset($preferredMarket))
+                    <div class="mt-4">
+                        <p class="text-sm text-gray-600 dark:text-gray-300">
+                            Preferred market:
+                            <span class="font-medium">{{ $preferredMarket->name }}</span>
+                        </p>
+                    </div>
+                @endif
                 @if ($marketFavorites->isNotEmpty())
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
 

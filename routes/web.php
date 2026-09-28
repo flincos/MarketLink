@@ -271,6 +271,13 @@ Route::middleware(['auth', 'role:customer'])
         Route::get('/markets/{market}', [CustomerMarketController::class, 'show'])
             ->name('customer.markets.show');
 
+        // Preferred market
+        Route::post('/markets/{market}/preferred', [CustomerMarketController::class, 'setPreferred'])
+            ->name('customer.markets.preferred.set');
+
+        Route::delete('/markets/preferred', [CustomerMarketController::class, 'clearPreferred'])
+            ->name('customer.markets.preferred.clear');        
+
         // Preferred markets
         Route::post('/favorites/markets/{market}', [CustomerFavoriteController::class, 'storeMarket'])
             ->name('customer.favorites.markets.store');
@@ -337,6 +344,8 @@ Route::middleware(['auth', 'role:customer'])
 
         return view('customer.announcements.index', compact('announcements'));
     })->name('announcements.index');    
+
+        
     });
 
     // Static pages

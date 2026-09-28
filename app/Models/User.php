@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'role', 'is_active'])]
+#[Fillable(['name', 'email', 'password', 'role', 'is_active', 'preferred_market_id'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -71,5 +71,9 @@ class User extends Authenticatable
         return $this->isFarmer()
             && $this->farmerProfile
             && $this->farmerProfile->status === 'approved';
+    }
+    public function preferredMarket()
+    {
+    return $this->belongsTo(\App\Models\Market::class, 'preferred_market_id');
     }
 }
